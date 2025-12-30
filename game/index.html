@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>MMT</title>
+        <style>
+            body {
+                background: #222;
+            }
+            #health {
+                font-size: 20px;
+                font-family: 'Courier New', Courier, monospace;
+                font-weight: bold;
+                color: white;
+            }
+            #health div {
+                margin-bottom: 10px;
+            }
+            #health div::before {
+                float: left;
+                content: " ";
+                display: block;
+                width: 18px;
+                height: 18px;
+                margin: 0px 10px 0 0px;
+                border: 2px solid white;
+                background-color: var(--color);
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="game" width="901" height="901"></canvas>
+
+        <div id="health">
+            <div style="--color: #ff0000">100</div>
+            <div style="--color: #00ff00">100</div>
+        </div>
+
+        <script src="./rendering.js"></script>
+        <script src="./game.js"></script>
+    </body>
+</html>
