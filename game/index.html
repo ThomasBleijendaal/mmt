@@ -6,7 +6,7 @@
             body {
                 background: #222;
             }
-            #health {
+            #health, #rowsCleared {
                 font-size: 20px;
                 font-family: 'Courier New', Courier, monospace;
                 font-weight: bold;
@@ -28,11 +28,13 @@
         </style>
     </head>
     <body>
+        <div id="rowsCleared">
+
+        </div>
+
         <canvas id="game" width="901" height="901"></canvas>
 
         <div id="health">
-            <div style="--color: #ff0000">100</div>
-            <div style="--color: #00ff00">100</div>
         </div>
 
         <script src="./rendering.js"></script>

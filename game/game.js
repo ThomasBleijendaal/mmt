@@ -1,5 +1,6 @@
 const canvas = document.querySelector("#game");
 const health = document.querySelector("#health");
+const rowsCleared = document.querySelector("#rowsCleared");
 const ctx = canvas.getContext("2d");
 
 const width = canvas.width;
@@ -15,78 +16,142 @@ let left = false;
 let right = false;
 let block = false;
 
-let blockState = new Array(rows);
+let blockState = null;
+let players = null;
+let cleared = 0;
 
-for (let r = 0; r < rows; r++) {
-    blockState[r] = new Array(columns);
-    
-    for (let c = 0; c < columns; c++) {
-        blockState[r][c] = { isEmpty: true, color: null, id: `${c} x ${r}` };
-        
-        if (r > rows / 2 && Math.random() > 0.1) {
-            blockState[r][c].isEmpty = false;
-            blockState[r][c].color = Math.random() > 0.7 ? 'red' : 'blue';
-        }
+let playerId = null;
+const playerName = "Test"; // prompt("Player name?");
+const playerColor = randomColor();
+let currentHealth = 40;
+
+/**
+ * @type WebSocket
+ */
+let ws;
+ 
+async function initGame() {
+
+    const joinResponse = await fetch("http://localhost:5021/join", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: playerName, color: playerColor })
+    });
+
+    if (joinResponse.status == 400) {
+        alert("Failed to join: " + await joinResponse.text());
+        window.location.reload();
     }
+
+    playerId = await joinResponse.json();
+
+    ws = new WebSocket(`http://localhost:5021/ws/${playerId}`);
+    ws.addEventListener("message", (event) => {
+        let data = JSON.parse(event.data);
+        players = data.players;
+        blockState = data.blockState;
+        cleared = data.rowsCleared;
+        currentHealth = players?.find(x => x.id == playerId)?.health ?? 1;
+
+        if (currentHealth <= 0) {
+            alert("You died!");
+            window.location.reload();
+        }
+    });
+
+    ws.addEventListener("close", (event) => {
+        alert("Server crashed!");
+        window.location.reload();
+    });
 }
 
-const playerColor = randomColor();
-
-let playerCount = 3;
-let playerHealth = { 'red' : 50, 'blue': 50 };
-playerHealth[playerColor] = 50;
-
 let blockTypes = [
-    // xx
+    // Xx
     // xx
     [[0, 0], [0, 1], [1, 1], [1, 0]],
 
-    // xxx
+    // xXx
     //   x
-    [[-1, 0], [0, 0], [0, 1], [1, 1]],
+    [[-1, 0], [0, 0], [1, 0], [1, 1]],
 
-    // xx
+    //   x
+    // xXx
+    [[-1, 0], [0, 0], [1, 0], [1, -1]],
+
+    // xX
     //  xx
     [[-1, 0], [0, 0], [1, 0], [1, 1]],
 
-    // xxxx
+    //  xx
+    // xX
+    [[-1, 0], [0, 0], [0, 1], [-1, 1]],
+
+    // xXxx
     //
     [[-1, 0], [0, 0], [1, 0], [2, 0]],
 
-    // xxx
+    // xXx
     //  x
-    [[-1, 0], [0, 0], [1, 0], [0, 1]]
+    [[-1, 0], [0, 0], [1, 0], [0, 1]],
+
+    // x x
+    // 
+    // x x
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]],
+
+    // x
+    [[0, 0]],
+
+    // x x
+    //  x
+    [[-1, 0], [1, 0], [0, 1]],
+
+    // x 
+    // x x
+    //   x
+    [[-1, -1], [-1, 0], [1, 0], [1, 1]],
 ];
+const saneBlocks = 6
+const insaneBlocks = 10;
 
 let currentBlockCenter = getNewPosition();
 let currentShape = getNewShape();
 let currentRotation = 0;
 
 function getNewPosition() {
-    return [2 + Math.floor(Math.random() * (columns - 4)), 0];
+    return [2 + Math.floor(Math.random() * (columns - 6)), 0];
 }
+
 function getNewShape() {
-    return Math.floor(Math.random() * 5);
+    let type = 0;
+    if (currentHealth > 80) {
+        type = Math.floor(Math.random() * insaneBlocks);
+    }
+    else {
+        type = Math.floor(Math.random() * saneBlocks);
+    }
+    return type;
 }
 
 function getBlockPositions(block, rotation) {
     let blockType = blockTypes[currentShape];
     let rotator =
         rotation === 0 ? ([x, y]) => [x, y] :
-        rotation === 1 ? ([x, y]) => [- y, x] :
-        rotation === 2 ? ([x, y]) => [- x, - y] :
-        rotation === 3 ? ([x, y]) => [y, - x] :
-                         ([x, y]) => [x, y];
+            rotation === 1 ? ([x, y]) => [- y, x] :
+                rotation === 2 ? ([x, y]) => [- x, - y] :
+                    rotation === 3 ? ([x, y]) => [y, - x] :
+                        ([x, y]) => [x, y];
 
     let positions = blockType.map(rotator).map(([x, y]) => [block[0] + x, block[1] + y]);
     return positions;
 }
 
-
 window.onkeydown = (event) => {
     if (event.code === "ArrowLeft") {
         event.preventDefault();
-        
+
         if (!left) {
             oldInputTimestamp = 0;
         }
@@ -95,11 +160,11 @@ window.onkeydown = (event) => {
     }
     if (event.code === "ArrowRight") {
         event.preventDefault();
-        
+
         if (!right) {
             oldInputTimestamp = 0;
         }
-        
+
         right = true;
     }
     if (event.code === "ArrowDown") {
@@ -107,6 +172,7 @@ window.onkeydown = (event) => {
         event.preventDefault();
     }
 }
+
 window.onkeyup = (event) => {
     if (event.code === "ArrowUp") {
         let newRotation = (currentRotation + 1) % 4;
@@ -132,7 +198,7 @@ window.onkeyup = (event) => {
 }
 
 function randomColor() {
-    function randomPart() { return ["4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e"][Math.floor(Math.random() * 11)];}
+    function randomPart() { return ["4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e"][Math.floor(Math.random() * 11)]; }
     return "#" + randomPart() + randomPart() + randomPart() + randomPart() + randomPart() + randomPart();
 }
 
@@ -152,6 +218,10 @@ function handleInputs() {
 }
 
 function willCollide(position, rotation, mutation) {
+    if (blockState == null) {
+        return [currentBlock, false];
+    }
+
     let currentBlock = getBlockPositions(position, rotation);
     let collidingBlocks = currentBlock.map(mutation);
 
@@ -167,7 +237,7 @@ function willCollide(position, rotation, mutation) {
 }
 
 function handleState() {
-    if (!block) {
+    if (!block && blockState) {
         let [currentBlock, hasCollision] = willCollide(currentBlockCenter, currentRotation, ([x, y]) => [x, y + 1]);
 
         if (hasCollision) {
@@ -178,7 +248,11 @@ function handleState() {
                 }
             }
 
-            // TODO: Emit blocks
+            let json = JSON.stringify({
+                currentBlock: getBlockPositions(currentBlockCenter, currentRotation),
+                blockPlaced: true
+            });
+            ws.send(json);
 
             currentBlockCenter = getNewPosition();
             currentShape = getNewShape();
@@ -186,78 +260,41 @@ function handleState() {
         }
         else {
             currentBlockCenter[1]++;
-        }
-    }
 
-    for (let r = rows - 1; r >= 0; r--) {
-        if (blockState[r].every(b => !b.isEmpty)) {
-            let rowsComplete = 1;
-            while (rowsComplete <= r && blockState[r - rowsComplete].every(b => !b.isEmpty)) {
-                rowsComplete++;
-            }
-
-            let blocks = blockState.slice(r - rowsComplete + 1, r + 1).flat();
-            let totalBlocks = blocks.length;
-
-            let groupings = Object.entries(
-                Object.groupBy(blocks, ({color}) => color))
-                .map(([color, groupBlocks]) => ({ color: color, percentage: (groupBlocks.length / totalBlocks) }));
-            
-            groupings.sort(({percentage}) => percentage);
-            groupings.map(obj => obj.dHealth = Math.floor((-10 / playerCount) + (10 * obj.percentage)));
-
-            for (const { color, percentage, dHealth } of groupings) {
-                console.log(color, percentage, dHealth);
-
-                playerHealth[color] += dHealth;
-            }
-
-            for (let [color, _] of Object.entries(playerHealth)) {
-                if (!groupings.some(g => g.color === color)) {
-                    playerHealth[color] -= 10;
-                }
-            }
-            
-            for (let nr = r; nr >= rowsComplete; nr--) {
-                blockState[nr - rowsComplete].forEach((b, c) => {
-                    blockState[nr][c].isEmpty = b.isEmpty;
-                    blockState[nr][c].color = b.color;
-                });
-            }
-
-            for (let nr = 0; nr <= rowsComplete; nr++) {
-                blockState[nr].forEach(b => {
-                    b.isEmpty = true;
-                    b.color = null;
-                });
-            }
-
-
-
-            // TODO: Emit event
+            let json = JSON.stringify({
+                currentBlock: getBlockPositions(currentBlockCenter, currentRotation),
+                blockPlaced: false
+            });
+            ws.send(json);
         }
     }
 }
 
 function drawFrame() {
-    drawBackground();
+    if (blockState && players) {
+        drawBackground();
 
-    drawState();
+        drawState();
 
-    let currentBlock = getBlockPositions(currentBlockCenter, currentRotation);
-    for (var [x, y] of currentBlock) {
-        drawBlock(x, y, { color: playerColor, isActive: true })
+        let currentBlock = getBlockPositions(currentBlockCenter, currentRotation);
+        for (var [x, y] of currentBlock) {
+            drawBlock(x, y, { color: playerColor, isActive: true })
+        }
+
+        health.innerHTML = players.map((p) => `<div style="--color: ${p.color}">${p.name} ${p.health}</div>`).join("");
+        rowsCleared.innerHTML = cleared;
     }
-
-    health.innerHTML = Object.entries(playerHealth).map(([color, health]) => `<div style="--color: ${color}">${health}</div>`).join("");
-
-    // TODO: Emit current blocks
 }
 
 let oldInputTimestamp = 0;
 let oldStateTimestamp = 0;
 
 let speed = 12;
+
+async function startGame() {
+    await initGame();
+    window.requestAnimationFrame(gameLoop);
+}
 
 function gameLoop(timeStamp) {
     if (timeStamp - oldInputTimestamp > (1000 / speed)) {
@@ -277,4 +314,4 @@ function gameLoop(timeStamp) {
     window.requestAnimationFrame(gameLoop);
 }
 
-window.requestAnimationFrame(gameLoop);
+startGame();
