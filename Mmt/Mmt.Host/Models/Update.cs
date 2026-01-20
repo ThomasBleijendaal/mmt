@@ -1,3 +1,3 @@
-﻿namespace Mmt.Host.Game;
+﻿namespace Mmt.Host.Models;
 
 public abstract record Update { }

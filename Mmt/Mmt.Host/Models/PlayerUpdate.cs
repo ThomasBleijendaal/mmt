@@ -1,4 +1,4 @@
-﻿namespace Mmt.Host.Game;
+﻿namespace Mmt.Host.Models;
 
 public record PlayerUpdate
 {

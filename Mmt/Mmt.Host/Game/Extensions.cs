@@ -1,9 +1,46 @@
-﻿namespace Mmt.Host.Game;
+﻿using Mmt.Host.Models;
+
+namespace Mmt.Host.Game;
 
 public static class Extensions
 {
     extension(int[][] input)
     {
         public Position[] ToPositions() => [.. input.Select(d => new Position(d[0], d[1]))];
+    }
+
+    extension(List<List<Block>> list)
+    {
+        public void SetColor(Position pos, string? color)
+        {
+            if (pos.X < 0 || pos.X >= list[0].Count ||
+                pos.Y < 0 || pos.Y >= list.Count)
+            {
+                return;
+            }
+
+            list[pos.Y][pos.X] = list[pos.Y][pos.X] with { Color = color };
+        }
+
+        public void SetColor(IEnumerable<Position> pos, string? color)
+        {
+            foreach (var p in pos)
+            {
+                list.SetColor(p, color);
+            }
+        }
+
+        public IEnumerable<Block> Blocks => list.GetAllBlocks();
+
+        private IEnumerable<Block> GetAllBlocks()
+        {
+            foreach (var row in list)
+            {
+                foreach (var block in row)
+                {
+                    yield return block;
+                }
+            }
+        }
     }
 }

@@ -1,7 +1,6 @@
-﻿
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace Mmt.Host.Game;
+namespace Mmt.Host.Models;
 
 public record PlayerJoinRequest
 {

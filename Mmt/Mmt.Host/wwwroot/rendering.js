@@ -1,15 +1,17 @@
 function drawBackground() {
+    let squareSize = size();
+
     ctx.beginPath();
     ctx.clearRect(0, 0, width, height);
 
-    for (let r = 0; r < rows + 1; r++) {
+    for (let r = 0; r < rows() + 1; r++) {
         ctx.beginPath();
         ctx.fillStyle = "#444444";
         ctx.rect(0, r * squareSize, width, 1);
         ctx.fill();
     }
 
-    for (let c = 0; c < columns + 1; c++) {
+    for (let c = 0; c < columns() + 1; c++) {
         ctx.beginPath();
         ctx.fillStyle = "#444444";
         ctx.rect(c * squareSize, 0, 1, height);
@@ -18,8 +20,8 @@ function drawBackground() {
 }
 
 function drawState() {
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < columns; c++) {
+    for (let r = 0; r < rows(); r++) {
+        for (let c = 0; c < columns(); c++) {
             let block = blockState[r][c];
             if (!block.isEmpty) {
                 drawBlock(c, r, block);
@@ -29,6 +31,8 @@ function drawState() {
 }
 
 function drawBlock(r, c, block) {
+    let squareSize = size();
+
     ctx.beginPath();
     ctx.fillStyle = block.color;
     ctx.rect(r * squareSize + 1, c * squareSize + 1, squareSize - 1, squareSize - 1);

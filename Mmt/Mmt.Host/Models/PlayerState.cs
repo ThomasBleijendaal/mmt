@@ -1,4 +1,4 @@
-﻿namespace Mmt.Host.Game;
+﻿namespace Mmt.Host.Models;
 
 public record PlayerState
 {
@@ -11,4 +11,8 @@ public record PlayerState
     public Position[]? CurrentBlock { get; set; }
 
     public int Health { get; set; } = 41;
+
+    public bool Ready { get; set; }
+
+    public bool IsDead => Health <= 0;
 }

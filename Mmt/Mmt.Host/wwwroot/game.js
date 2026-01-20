@@ -1,15 +1,26 @@
+const initScreen = document.querySelector("#init-screen");
+const joinScreen = document.querySelector("#join-screen");
+const gameScreen = document.querySelector("#game-screen");
+const deathScreen = document.querySelector("#death-screen");
+const winScreen = document.querySelector("#win-screen");
+
+const nameInput = document.querySelector("#name");
+const joinButton = document.querySelector("#join");
+const readyButton = document.querySelector("#ready");
+
 const canvas = document.querySelector("#game");
 const health = document.querySelector("#health");
-const rowsCleared = document.querySelector("#rowsCleared");
 const ctx = canvas.getContext("2d");
 
 const width = canvas.width;
 const height = canvas.height;
 
-const squareSize = 30;
+const squareSize = 20;
+let currentTileSize = 4;
 
-const rows = Math.floor(height / squareSize);
-const columns = Math.floor(width / squareSize);
+function rows() { return Math.floor(height / squareSize / currentTileSize); }
+function columns() { return Math.floor(width / squareSize / currentTileSize); }
+function size() { return squareSize * currentTileSize; }
 
 let rotate = false;
 let left = false;
@@ -21,16 +32,24 @@ let players = null;
 let cleared = 0;
 
 let playerId = null;
-const playerName = "Test"; // prompt("Player name?");
+let playerName = "Test";
 const playerColor = randomColor();
 let currentHealth = 40;
+let gameStarted = false;
+let isDead = false;
+let gameFinished = false;
 
 /**
  * @type WebSocket
  */
 let ws;
- 
+
 async function initGame() {
+    initScreen.classList.add("hidden");
+    joinScreen.classList.remove("hidden");
+    gameScreen.classList.remove("hidden");
+
+    playerName = nameInput.value ?? "Dummy";
 
     const joinResponse = await fetch("http://localhost:5021/join", {
         method: "POST",
@@ -53,11 +72,31 @@ async function initGame() {
         players = data.players;
         blockState = data.blockState;
         cleared = data.rowsCleared;
-        currentHealth = players?.find(x => x.id == playerId)?.health ?? 1;
+        currentTileSize = data.tileSize;
+        gameStarted = !gameFinished && (data.status == "Running" || data.status == "Finished");
 
-        if (currentHealth <= 0) {
-            alert("You died!");
-            window.location.reload();
+        let player = players?.find(x => x.id == playerId);
+
+        if (player) {
+            currentHealth = player?.health ?? 1;
+
+            if (currentHealth <= 0 && !isDead) {
+                isDead = player.isDead;
+                if (isDead) {
+                    playerDead();
+                }
+            }
+        }
+
+        if (data.status == "Finished" && !gameFinished) {
+            gameFinished = true;
+
+            if (isDead) {
+                restartGame();
+            }
+            else {
+                playerWon();
+            }
         }
     });
 
@@ -65,6 +104,38 @@ async function initGame() {
         alert("Server crashed!");
         window.location.reload();
     });
+
+    window.requestAnimationFrame(gameLoop);
+}
+
+function joinGame() {
+    joinScreen.classList.add("hidden");
+
+    currentBlockCenter = getNewPosition();
+    currentShape = getNewShape();
+    currentRotation = 0;
+
+    let json = JSON.stringify({ ready: true });
+    ws.send(json);
+}
+
+function playerDead() {
+    deathScreen.classList.remove("hidden");
+    currentBlockCenter = [];
+}
+
+function playerWon() {
+    winScreen.classList.remove("hidden");
+    currentBlockCenter = [];
+
+    restartGame();
+}
+
+function restartGame() {
+    window.setTimeout(function () {
+        alert("Click OK to restart");
+        window.location.reload();
+    }, 2000);
 }
 
 let blockTypes = [
@@ -116,12 +187,12 @@ let blockTypes = [
 const saneBlocks = 6
 const insaneBlocks = 10;
 
-let currentBlockCenter = getNewPosition();
+let currentBlockCenter = [];
 let currentShape = getNewShape();
 let currentRotation = 0;
 
 function getNewPosition() {
-    return [2 + Math.floor(Math.random() * (columns - 6)), 0];
+    return [2 + Math.floor(Math.random() * (columns() - 3)), 0];
 }
 
 function getNewShape() {
@@ -149,6 +220,10 @@ function getBlockPositions(block, rotation) {
 }
 
 window.onkeydown = (event) => {
+    if (!gameStarted || isDead) {
+        return;
+    }
+
     if (event.code === "ArrowLeft") {
         event.preventDefault();
 
@@ -174,6 +249,10 @@ window.onkeydown = (event) => {
 }
 
 window.onkeyup = (event) => {
+    if (!gameStarted || isDead) {
+        return;
+    }
+
     if (event.code === "ArrowUp") {
         let newRotation = (currentRotation + 1) % 4;
         let [_, hasCollision] = willCollide(currentBlockCenter, newRotation, xy => xy);
@@ -226,11 +305,11 @@ function willCollide(position, rotation, mutation) {
     let collidingBlocks = currentBlock.map(mutation);
 
     if (position[1] < 2) {
-        return [currentBlock, collidingBlocks.some(([x, y]) => x < 0 || x >= columns)];
+        return [currentBlock, collidingBlocks.some(([x, y]) => x < 0 || x >= columns())];
     }
 
     let hasCollision =
-        collidingBlocks.some(([x, y]) => x < 0 || x >= columns || y < 0 || y >= rows) ||
+        collidingBlocks.some(([x, y]) => x < 0 || x >= columns() || y < 0 || y >= rows()) ||
         collidingBlocks.some(([x, y]) => !blockState[y][x].isEmpty);
 
     return [currentBlock, hasCollision];
@@ -242,7 +321,7 @@ function handleState() {
 
         if (hasCollision) {
             for (var [x, y] of currentBlock) {
-                if (x >= 0 && x < columns && y >= 0 && y < rows) {
+                if (x >= 0 && x < columns() && y >= 0 && y < rows()) {
                     blockState[y][x].isEmpty = false;
                     blockState[y][x].color = playerColor;
                 }
@@ -278,11 +357,10 @@ function drawFrame() {
 
         let currentBlock = getBlockPositions(currentBlockCenter, currentRotation);
         for (var [x, y] of currentBlock) {
-            drawBlock(x, y, { color: playerColor, isActive: true })
+            drawBlock(x, y, { color: playerColor, isActive: true });
         }
 
-        health.innerHTML = players.map((p) => `<div style="--color: ${p.color}">${p.name} ${p.health}</div>`).join("");
-        rowsCleared.innerHTML = cleared;
+        health.innerHTML = players.map((p) => `<div style="--color: ${p.color}">${p.name} ${p.health} ${(p.isDead ? "(dead)" : "")} ${(p.ready ? "" : "(not ready)")}</div>`).join("");
     }
 }
 
@@ -291,22 +369,19 @@ let oldStateTimestamp = 0;
 
 let speed = 12;
 
-async function startGame() {
-    await initGame();
-    window.requestAnimationFrame(gameLoop);
-}
-
 function gameLoop(timeStamp) {
-    if (timeStamp - oldInputTimestamp > (1000 / speed)) {
-        oldInputTimestamp = timeStamp;
+    if (gameStarted && !isDead) {
+        if (timeStamp - oldInputTimestamp > (1000 / speed)) {
+            oldInputTimestamp = timeStamp;
 
-        handleInputs();
-    }
+            handleInputs();
+        }
 
-    if (timeStamp - oldStateTimestamp > (3000 / speed)) {
-        oldStateTimestamp = timeStamp;
+        if (timeStamp - oldStateTimestamp > (3000 / speed)) {
+            oldStateTimestamp = timeStamp;
 
-        handleState();
+            handleState();
+        }
     }
 
     drawFrame();
@@ -314,4 +389,5 @@ function gameLoop(timeStamp) {
     window.requestAnimationFrame(gameLoop);
 }
 
-startGame();
+joinButton.onclick = initGame;
+readyButton.onclick = joinGame;
