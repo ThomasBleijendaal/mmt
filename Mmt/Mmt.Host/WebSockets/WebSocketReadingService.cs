@@ -33,11 +33,11 @@ internal class WebSocketReadingService : BackgroundService
             await Task.Delay(100, stoppingToken);
 
             // add any missing web sockets
-            foreach (var (id, ws) in _handler.GetAllWebSockets())
+            foreach (var (gameId, playerId, ws) in _handler.GetAllWebSockets(null))
             {
                 if (!_readingTasks.ContainsKey(ws))
                 {
-                    _readingTasks.TryAdd(ws, ReadWebSocketAsync(id, ws, stoppingToken));
+                    _readingTasks.TryAdd(ws, ReadWebSocketAsync(gameId, playerId, ws, stoppingToken));
                 }
             }
 
@@ -58,7 +58,7 @@ internal class WebSocketReadingService : BackgroundService
         }
     }
 
-    private async Task ReadWebSocketAsync(Guid id, WebSocket ws, CancellationToken stoppingToken)
+    private async Task ReadWebSocketAsync(Guid gameId, Guid playerId, WebSocket ws, CancellationToken stoppingToken)
     {
         try
         {
@@ -86,7 +86,8 @@ internal class WebSocketReadingService : BackgroundService
                         await _playerChannel.Writer.WriteAsync(
                             new PlayerUpdate
                             {
-                                Id = id,
+                                GameId = gameId,
+                                PlayerId = playerId,
                                 Update = playerState
                             });
                     }
@@ -95,7 +96,8 @@ internal class WebSocketReadingService : BackgroundService
                         await _playerChannel.Writer.WriteAsync(
                             new PlayerUpdate
                             {
-                                Id = id,
+                                GameId = gameId,
+                                PlayerId = playerId,
                                 Update = new ReadyUpdate()
                             });
                     }

@@ -1,10 +1,7 @@
 ﻿namespace Mmt.Host.Models;
 
-public record PlayerUpdate
+public record PlayerJoinResponse
 {
     public required Guid GameId { get; init; }
-
     public required Guid PlayerId { get; init; }
-
-    public required Update Update { get; init; }
 }

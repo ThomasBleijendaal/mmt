@@ -2,13 +2,6 @@
 
 namespace Mmt.Host.Game;
 
-public enum GameStatus
-{
-    PreGame,
-    Running,
-    Finished
-}
-
 public class GameState
 {
     private readonly int _size;
@@ -28,6 +21,8 @@ public class GameState
     private List<List<Block>> Field { get; set; }
 
     private List<PlayerState> Players { get; init; } = [];
+
+    public int PlayerCount => Players.Count;
 
     public Guid? AddPlayer(string name, string color)
     {
@@ -91,9 +86,9 @@ public class GameState
         }
     }
 
-    public void DropPlayer(Guid id)
+    public void DropPlayer(Guid playerId)
     {
-        Players.RemoveAll(p => p.Id == id);
+        Players.RemoveAll(p => p.Id == playerId);
         HandleBoardSize();
     }
 

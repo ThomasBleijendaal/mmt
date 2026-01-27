@@ -7,34 +7,35 @@ namespace Mmt.Host.WebSockets;
 internal class WebSocketHandler
 {
     private readonly ConcurrentDictionary<WebSocket, WebSocketRegistration> _webSockets = new();
-    private readonly GameState _gameState;
+    private readonly GameStateRepository _gameStateRepository;
 
-    public WebSocketHandler(
-        GameState gameState)
+    public WebSocketHandler(GameStateRepository gameStateRepository)
     {
-        _gameState = gameState;
+        _gameStateRepository = gameStateRepository;
     }
 
-    public Task AddWebSocketAsync(Guid id, WebSocket ws)
+    public Task AddWebSocketAsync(Guid gameId, Guid playerId, WebSocket ws)
     {
         Console.WriteLine($"Adding {ws.GetHashCode()}");
 
         var tcs = new TaskCompletionSource();
 
-        _webSockets[ws] = new(ws, id, tcs);
+        _webSockets[ws] = new(ws, PlayerId: playerId, GameId: gameId, tcs);
 
         return tcs.Task;
     }
 
-    public IEnumerable<(Guid id, WebSocket ws)> GetAllWebSockets()
+    public IEnumerable<(Guid guidId, Guid playerId, WebSocket ws)> GetAllWebSockets(Guid? gameId)
     {
-        var wss = _webSockets.ToArray();
+        var wss = gameId.HasValue
+            ? _webSockets.Where(x => x.Value.GameId == gameId).ToArray()
+            : _webSockets.ToArray();
 
-        foreach (var (_, (ws, id, _)) in wss)
+        foreach (var (_, (ws, playerId, playerGameId, _)) in wss)
         {
             if (ws.State == WebSocketState.Open)
             {
-                yield return (id, ws);
+                yield return (playerGameId, playerId, ws);
             }
             else
             {
@@ -44,9 +45,9 @@ internal class WebSocketHandler
         }
     }
 
-    public WebSocket? GetWebSocket(Guid id)
+    public WebSocket? GetWebSocket(Guid gameId, Guid playerId)
     {
-        return _webSockets.Values.FirstOrDefault(x => x.Id == id)?.WebSocket;
+        return _webSockets.Values.FirstOrDefault(x => x.GameId == gameId && x.PlayerId == playerId)?.WebSocket;
     }
 
     public async Task RemoveWebSocketAsync(WebSocket ws)
@@ -66,10 +67,10 @@ internal class WebSocketHandler
 
         if (_webSockets.TryRemove(ws, out var registration))
         {
-            _gameState.DropPlayer(registration.Id);
+            _gameStateRepository.GetGame(registration.GameId).DropPlayer(registration.PlayerId);
             registration.TaskCompletionSource.SetResult();
         }
     }
 
-    public record WebSocketRegistration(WebSocket WebSocket, Guid Id, TaskCompletionSource TaskCompletionSource);
+    private sealed record WebSocketRegistration(WebSocket WebSocket, Guid PlayerId, Guid GameId, TaskCompletionSource TaskCompletionSource);
 }

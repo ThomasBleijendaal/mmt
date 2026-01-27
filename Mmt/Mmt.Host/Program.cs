@@ -7,20 +7,22 @@ using Mmt.Host.WebSockets;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("http://*:5021");
+builder.WebHost.UseUrls("http://*:8080");
 builder.WebHost.UseStaticWebAssets();
 
 // Add services to the container.
 
 var channel = Channel.CreateUnbounded<PlayerUpdate>();
-var gameState = new GameState(48);
+
+var gameStateRepo = new GameStateRepository(48);
+
 var jsonSerializerOptions = new JsonSerializerOptions
 {
     PropertyNameCaseInsensitive = true,
     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 };
 
-builder.Services.AddSingleton(gameState);
+builder.Services.AddSingleton(gameStateRepo);
 builder.Services.AddSingleton(jsonSerializerOptions);
 builder.Services.AddSingleton(channel);
 builder.Services.AddHostedService<GameService>();
@@ -40,8 +42,12 @@ app.UseStaticFiles();
 app.UseCors(b => b.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
 app.UseWebSockets(new() { KeepAliveInterval = TimeSpan.FromSeconds(10) });
 
-app.MapPost("/join", ([FromBody] PlayerJoinRequest request) =>
+app.MapPost("/join", ([FromQuery(Name = "gameId")] string? gameIdString, [FromBody] PlayerJoinRequest request) =>
 {
+    var gameId = Guid.TryParse(gameIdString, out var gameIdGuid) ? gameIdGuid : Guid.NewGuid();
+
+    var gameState = gameStateRepo.GetGame(gameId);
+
     if (gameState.Status == GameStatus.Finished)
     {
         gameState.Reset();
@@ -58,10 +64,14 @@ app.MapPost("/join", ([FromBody] PlayerJoinRequest request) =>
         return Results.BadRequest("Duplicate color");
     }
 
-    return Results.Ok(id);
+    return Results.Ok(new PlayerJoinResponse
+    {
+        GameId = gameId,
+        PlayerId = id.Value
+    });
 });
 
-app.MapGet("/ws/{id:guid}", async (HttpContext context, WebSocketHandler handler, [FromRoute] Guid id) =>
+app.MapGet("/ws/{gameId:guid}/{playerId:guid}", async (HttpContext context, WebSocketHandler handler, [FromRoute] Guid gameId, [FromRoute] Guid playerId) =>
 {
     if (!context.WebSockets.IsWebSocketRequest)
     {
@@ -72,7 +82,7 @@ app.MapGet("/ws/{id:guid}", async (HttpContext context, WebSocketHandler handler
 
     var ws = await context.WebSockets.AcceptWebSocketAsync();
 
-    await handler.AddWebSocketAsync(id, ws);
+    await handler.AddWebSocketAsync(gameId, playerId, ws);
 });
 
 

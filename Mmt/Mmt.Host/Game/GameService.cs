@@ -5,14 +5,14 @@ namespace Mmt.Host.Game;
 
 public class GameService : BackgroundService
 {
-    private readonly GameState _gameState;
+    private readonly GameStateRepository _gameStateRepository;
     private readonly ChannelReader<PlayerUpdate> _playerChannel;
 
     public GameService(
-        GameState gameState,
+        GameStateRepository gameStateRepository,
         Channel<PlayerUpdate> playerChannel)
     {
-        _gameState = gameState;
+        _gameStateRepository = gameStateRepository;
         _playerChannel = playerChannel.Reader;
     }
 
@@ -26,21 +26,23 @@ public class GameService : BackgroundService
             {
                 if (_playerChannel.TryRead(out var playerUpdate))
                 {
+                    var gameState = _gameStateRepository.GetGame(playerUpdate.GameId);
+
                     if (playerUpdate.Update is PlayerStateUpdate playerState)
                     {
                         if (playerState.BlockPlaced)
                         {
-                            _gameState.PlaceBlock(playerUpdate.Id, playerState.CurrentBlock.ToPositions());
-                            _gameState.RemoveCurrentBlockFromPlayer(playerUpdate.Id);
+                            gameState.PlaceBlock(playerUpdate.PlayerId, playerState.CurrentBlock.ToPositions());
+                            gameState.RemoveCurrentBlockFromPlayer(playerUpdate.PlayerId);
                         }
                         else
                         {
-                            _gameState.UpdateCurrentBlockOfPlayer(playerUpdate.Id, playerState.CurrentBlock.ToPositions());
+                            gameState.UpdateCurrentBlockOfPlayer(playerUpdate.PlayerId, playerState.CurrentBlock.ToPositions());
                         }
                     }
                     else if (playerUpdate.Update is ReadyUpdate)
                     {
-                        _gameState.ReadyPlayer(playerUpdate.Id);
+                        gameState.ReadyPlayer(playerUpdate.PlayerId);
                     }
                 }
             }

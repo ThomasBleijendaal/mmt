@@ -3,6 +3,7 @@ const joinScreen = document.querySelector("#join-screen");
 const gameScreen = document.querySelector("#game-screen");
 const deathScreen = document.querySelector("#death-screen");
 const winScreen = document.querySelector("#win-screen");
+const shareUrl = document.querySelector("#share-url");
 
 const nameInput = document.querySelector("#name");
 const joinButton = document.querySelector("#join");
@@ -31,6 +32,7 @@ let blockState = null;
 let players = null;
 let cleared = 0;
 
+let gameId = window.location.hash?.replace("#", "");
 let playerId = null;
 let playerName = "Test";
 const playerColor = randomColor();
@@ -44,6 +46,8 @@ let gameFinished = false;
  */
 let ws;
 
+let url = window.location.href.replace(window.location.hash, "");
+
 async function initGame() {
     initScreen.classList.add("hidden");
     joinScreen.classList.remove("hidden");
@@ -51,7 +55,7 @@ async function initGame() {
 
     playerName = nameInput.value ?? "Dummy";
 
-    const joinResponse = await fetch("http://localhost:5021/join", {
+    const joinResponse = await fetch(`${url}join?gameId=${gameId}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -64,9 +68,14 @@ async function initGame() {
         window.location.reload();
     }
 
-    playerId = await joinResponse.json();
+    let result = await joinResponse.json();
+    gameId = result.gameId;
+    playerId = result.playerId;
 
-    ws = new WebSocket(`http://localhost:5021/ws/${playerId}`);
+    window.location.hash = gameId;
+    shareUrl.innerHTML = window.location.href;
+
+    ws = new WebSocket(`${url}ws/${gameId}/${playerId}`);
     ws.addEventListener("message", (event) => {
         let data = JSON.parse(event.data);
         players = data.players;
