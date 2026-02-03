@@ -18,6 +18,8 @@ public class GameState
 
     public GameStatus Status { get; private set; } = GameStatus.PreGame;
 
+    private Guid NextGameId { get; init; } = Guid.NewGuid();
+
     private List<List<Block>> Field { get; set; }
 
     private List<PlayerState> Players { get; init; } = [];
@@ -66,14 +68,18 @@ public class GameState
         }
     }
 
-    public void UpdateCurrentBlockOfPlayer(Guid playerId, Position[] positions)
+    public void UpdateCurrentBlockOfPlayer(Guid playerId, Position[] positions, Position center)
     {
-        Players.FirstOrDefault(x => x.Id == playerId)?.CurrentBlock = positions;
+        var playerState = Players.FirstOrDefault(x => x.Id == playerId);
+        playerState?.CurrentBlock = positions;
+        playerState?.CenterPosition = center;
     }
 
     public void RemoveCurrentBlockFromPlayer(Guid playerId)
     {
-        Players.FirstOrDefault(x => x.Id == playerId)?.CurrentBlock = null;
+        var playerState = Players.FirstOrDefault(x => x.Id == playerId);
+        playerState?.CurrentBlock = null;
+        playerState?.CenterPosition = null;
     }
 
     public void ReadyPlayer(Guid id)
@@ -128,7 +134,11 @@ public class GameState
 
         return new NetworkGameState
         {
-            BlockState = result,
+            NextGameId = NextGameId,
+            BlockState = [.. result.Select(r => r.Select(b => new NetworkGameState.NetworkBlock
+            {
+                Color = b.Color
+            }).ToArray())],
             RowsCleared = RowsCleared,
             Players = [.. Players.Select(p => new NetworkGameState.NetworkPlayer
             {
@@ -137,7 +147,8 @@ public class GameState
                 Name = p.Name,
                 Health = p.Health,
                 IsDead = p.IsDead,
-                Ready = p.Ready
+                Ready = p.Ready,
+                CenterPosition = p.CenterPosition
             })],
             TileSize = TileSize,
             Status = Status.ToString()

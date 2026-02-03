@@ -1,5 +1,5 @@
-﻿using System.Net.WebSockets;
-using System.Text;
+﻿using System.Buffers;
+using System.Net.WebSockets;
 using System.Text.Json;
 using Mmt.Host.Game;
 
@@ -41,17 +41,29 @@ internal class WebSocketSendingService : BackgroundService
         // if we do that, this class should have the same shape as the reading variant
         var state = gameState.GetNetworkState(playerId);
 
-        var @string = JsonSerializer.Serialize(state, _jsonSerializerOptions);
-        var buffer = Encoding.UTF8.GetBytes(@string);
-        var memory = new Memory<byte>(buffer);
+        var array = ArrayPool<byte>.Shared.Rent(64 * 1024);
 
         try
         {
-            await ws.SendAsync(memory, WebSocketMessageType.Text, true, stoppingToken);
+            var memoryStream = new MemoryStream(array);
+            var writer = new Utf8JsonWriter(memoryStream);
+
+            JsonSerializer.Serialize(writer, state, _jsonSerializerOptions);
+
+            var memory = new Memory<byte>(array, 0, (int)writer.BytesCommitted);
+
+            try
+            {
+                await ws.SendAsync(memory, WebSocketMessageType.Text, true, stoppingToken);
+            }
+            catch
+            {
+                await _handler.RemoveWebSocketAsync(ws);
+            }
         }
-        catch
+        finally
         {
-            await _handler.RemoveWebSocketAsync(ws);
+            ArrayPool<byte>.Shared.Return(array);
         }
     }
 }

@@ -32,12 +32,19 @@ public class GameService : BackgroundService
                     {
                         if (playerState.BlockPlaced)
                         {
-                            gameState.PlaceBlock(playerUpdate.PlayerId, playerState.CurrentBlock.ToPositions());
-                            gameState.RemoveCurrentBlockFromPlayer(playerUpdate.PlayerId);
+                            gameState.PlaceBlock(
+                                playerUpdate.PlayerId,
+                                playerState.CurrentBlock.ToPositions());
+
+                            gameState.RemoveCurrentBlockFromPlayer(
+                                playerUpdate.PlayerId);
                         }
                         else
                         {
-                            gameState.UpdateCurrentBlockOfPlayer(playerUpdate.PlayerId, playerState.CurrentBlock.ToPositions());
+                            gameState.UpdateCurrentBlockOfPlayer(
+                                playerUpdate.PlayerId,
+                                playerState.CurrentBlock.ToPositions(),
+                                playerState.CenterPosition.ToPosition());
                         }
                     }
                     else if (playerUpdate.Update is ReadyUpdate)

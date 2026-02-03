@@ -2,7 +2,9 @@
 
 public record NetworkGameState
 {
-    public required Block[][] BlockState { get; init; }
+    public required Guid NextGameId { get; init; }
+
+    public required NetworkBlock[][] BlockState { get; init; }
 
     public required NetworkPlayer[] Players { get; init; }
 
@@ -11,6 +13,11 @@ public record NetworkGameState
     public required int TileSize { get; init; }
 
     public required string Status { get; init; }
+
+    public record NetworkBlock
+    {
+        public required string? Color { get; init; }
+    }
 
     public record NetworkPlayer
     {
@@ -25,5 +32,7 @@ public record NetworkGameState
         public required bool Ready { get; init; }
 
         public required bool IsDead { get; init; }
+
+        public required Position? CenterPosition { get; init; }
     }
 }

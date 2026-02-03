@@ -10,6 +10,8 @@ public record PlayerState
 
     public Position[]? CurrentBlock { get; set; }
 
+    public Position? CenterPosition { get; set; }
+
     public int Health { get; set; } = 41;
 
     public bool Ready { get; set; }

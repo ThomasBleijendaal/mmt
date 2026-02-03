@@ -77,9 +77,16 @@ internal class WebSocketReadingService : BackgroundService
                     PlayerStateUpdate? playerState = null;
                     try
                     {
-                        playerState = JsonSerializer.Deserialize<PlayerStateUpdate>(@string, _jsonSerializerOptions);
+                        var document = JsonDocument.Parse(@string);
+                        if (document.RootElement.TryGetProperty("currentBlock", out var _))
+                        {
+                            playerState = document.Deserialize<PlayerStateUpdate>(_jsonSerializerOptions);
+                        }
                     }
-                    catch { }
+                    catch
+                    {
+                        ;
+                    }
 
                     if (playerState != null)
                     {

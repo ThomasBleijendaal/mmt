@@ -16,7 +16,7 @@ const ctx = canvas.getContext("2d");
 const width = canvas.width;
 const height = canvas.height;
 
-const squareSize = 20;
+const squareSize = 16;
 let currentTileSize = 4;
 
 function rows() { return Math.floor(height / squareSize / currentTileSize); }
@@ -27,12 +27,15 @@ let rotate = false;
 let left = false;
 let right = false;
 let block = false;
+let blockedSince = 0;
+let maxBlock = 2000.0;
 
 let blockState = null;
 let players = null;
 let cleared = 0;
 
 let gameId = window.location.hash?.replace("#", "");
+let nextGameId;
 let playerId = null;
 let playerName = "Test";
 const playerColor = randomColor();
@@ -83,6 +86,7 @@ async function initGame() {
         cleared = data.rowsCleared;
         currentTileSize = data.tileSize;
         gameStarted = !gameFinished && (data.status == "Running" || data.status == "Finished");
+        nextGameId = data.nextGameId;
 
         let player = players?.find(x => x.id == playerId);
 
@@ -143,6 +147,7 @@ function playerWon() {
 function restartGame() {
     window.setTimeout(function () {
         alert("Click OK to restart");
+        window.location.hash = `#${nextGameId}`;
         window.location.reload();
     }, 2000);
 }
@@ -252,7 +257,10 @@ window.onkeydown = (event) => {
         right = true;
     }
     if (event.code === "ArrowDown") {
-        block = true;
+        if (!block) {
+            blockedSince = oldInputTimestamp;
+            block = true;
+        }
         event.preventDefault();
     }
 }
@@ -307,7 +315,7 @@ function handleInputs() {
 
 function willCollide(position, rotation, mutation) {
     if (blockState == null) {
-        return [currentBlock, false];
+        return [null, false];
     }
 
     let currentBlock = getBlockPositions(position, rotation);
@@ -319,7 +327,7 @@ function willCollide(position, rotation, mutation) {
 
     let hasCollision =
         collidingBlocks.some(([x, y]) => x < 0 || x >= columns() || y < 0 || y >= rows()) ||
-        collidingBlocks.some(([x, y]) => !blockState[y][x].isEmpty);
+        collidingBlocks.some(([x, y]) => blockState[y][x].color != null);
 
     return [currentBlock, hasCollision];
 }
@@ -329,33 +337,49 @@ function handleState() {
         let [currentBlock, hasCollision] = willCollide(currentBlockCenter, currentRotation, ([x, y]) => [x, y + 1]);
 
         if (hasCollision) {
-            for (var [x, y] of currentBlock) {
-                if (x >= 0 && x < columns() && y >= 0 && y < rows()) {
-                    blockState[y][x].isEmpty = false;
-                    blockState[y][x].color = playerColor;
-                }
-            }
-
-            let json = JSON.stringify({
-                currentBlock: getBlockPositions(currentBlockCenter, currentRotation),
-                blockPlaced: true
-            });
-            ws.send(json);
-
-            currentBlockCenter = getNewPosition();
-            currentShape = getNewShape();
-            currentRotation = Math.floor(Math.random() * 4);
+            placeBlock(currentBlock);
         }
         else {
-            currentBlockCenter[1]++;
-
-            let json = JSON.stringify({
-                currentBlock: getBlockPositions(currentBlockCenter, currentRotation),
-                blockPlaced: false
-            });
-            ws.send(json);
+            moveBlock();
         }
     }
+    else if (block && blockState) {
+        if (oldInputTimestamp - blockedSince > maxBlock) {
+            let currentBlock = getBlockPositions(currentBlockCenter, currentRotation);
+            placeBlock(currentBlock);
+            block = false;
+        }
+    }
+}
+
+function placeBlock(currentBlock) {
+    for (var [x, y] of currentBlock) {
+        if (x >= 0 && x < columns() && y >= 0 && y < rows()) {
+            blockState[y][x].color = playerColor;
+        }
+    }
+
+    let json = JSON.stringify({
+        currentBlock: getBlockPositions(currentBlockCenter, currentRotation),
+        centerPosition: currentBlockCenter,
+        blockPlaced: true
+    });
+    ws.send(json);
+
+    currentBlockCenter = getNewPosition();
+    currentShape = getNewShape();
+    currentRotation = Math.floor(Math.random() * 4);
+}
+
+function moveBlock() {
+    currentBlockCenter[1]++;
+
+    let json = JSON.stringify({
+        currentBlock: getBlockPositions(currentBlockCenter, currentRotation),
+        centerPosition: currentBlockCenter,
+        blockPlaced: false
+    });
+    ws.send(json);
 }
 
 function drawFrame() {
@@ -365,8 +389,18 @@ function drawFrame() {
         drawState();
 
         let currentBlock = getBlockPositions(currentBlockCenter, currentRotation);
-        for (var [x, y] of currentBlock) {
-            drawBlock(x, y, { color: playerColor, isActive: true });
+        let percentage = block ? ((oldInputTimestamp - blockedSince) / maxBlock) : null;
+
+        console.log(oldInputTimestamp, blockedSince, oldInputTimestamp - blockedSince, percentage);
+
+        for (let [x, y] of currentBlock) {
+            drawBlock(x, y, { color: playerColor, isActive: true }, percentage);
+        }
+
+        for (let player of players) {
+            if (player.centerPosition && player.id != playerId) {
+                drawPlayer(player.centerPosition.x, player.centerPosition.y, player.name);
+            }
         }
 
         health.innerHTML = players.map((p) => `<div style="--color: ${p.color}">${p.name} ${p.health} ${(p.isDead ? "(dead)" : "")} ${(p.ready ? "" : "(not ready)")}</div>`).join("");
@@ -376,7 +410,7 @@ function drawFrame() {
 let oldInputTimestamp = 0;
 let oldStateTimestamp = 0;
 
-let speed = 12;
+let speed = 10;
 
 function gameLoop(timeStamp) {
     if (gameStarted && !isDead) {
