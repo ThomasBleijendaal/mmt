@@ -12,7 +12,7 @@ public record PlayerState
 
     public Position? CenterPosition { get; set; }
 
-    public int Health { get; set; } = 41;
+    public int Health { get; set; } = 40;
 
     public bool Ready { get; set; }
 

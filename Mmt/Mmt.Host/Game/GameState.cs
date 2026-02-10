@@ -182,12 +182,14 @@ public class GameState
                 var totalBlocks = (double)filledBlocks.Length;
 
                 var percentages = filledBlocks
+                    .Where(x => x.Color != null)
                     .GroupBy(x => x.Color)
                     .Select(g => (color: g.Key, percentage: g.Count() / totalBlocks))
                     .OrderByDescending(d => d.percentage)
                     .ToArray();
 
                 var maxPercentage = percentages.Max(x => x.percentage);
+
                 var updateBoardSize = false;
 
                 var colorsInBlocks = percentages.Select(x => x.color).ToArray();

@@ -37,6 +37,7 @@ let cleared = 0;
 let gameId = window.location.hash?.replace("#", "");
 let nextGameId;
 let playerId = null;
+let playerIndex = null;
 let playerName = "Test";
 const playerColor = randomColor();
 let currentHealth = 40;
@@ -83,10 +84,13 @@ async function initGame() {
         let data = JSON.parse(event.data);
         players = data.players;
         blockState = data.blockState;
+        
         cleared = data.rowsCleared;
         currentTileSize = data.tileSize;
         gameStarted = !gameFinished && (data.status == "Running" || data.status == "Finished");
         nextGameId = data.nextGameId;
+
+        playerIndex = players?.filter(x => !x.isDead).findIndex(x => x.id == playerId);
 
         let player = players?.find(x => x.id == playerId);
 
@@ -99,6 +103,10 @@ async function initGame() {
                     playerDead();
                 }
             }
+        }
+
+        if (gameStarted && !currentBlockCenter) {
+            currentBlockCenter = getNewPosition();
         }
 
         if (data.status == "Finished" && !gameFinished) {
@@ -123,10 +131,6 @@ async function initGame() {
 
 function joinGame() {
     joinScreen.classList.add("hidden");
-
-    currentBlockCenter = getNewPosition();
-    currentShape = getNewShape();
-    currentRotation = 0;
 
     let json = JSON.stringify({ ready: true });
     ws.send(json);
@@ -201,12 +205,18 @@ let blockTypes = [
 const saneBlocks = 6
 const insaneBlocks = 10;
 
-let currentBlockCenter = [];
+let currentBlockCenter = null;
 let currentShape = getNewShape();
 let currentRotation = 0;
 
 function getNewPosition() {
-    return [2 + Math.floor(Math.random() * (columns() - 3)), 0];
+    let alivePlayers = players.filter(x => !x.isDead).length;
+    if (alivePlayers == 0) {
+        return [colums() / 2, 0];
+    }
+
+    let insert = Math.floor((columns() / alivePlayers) * (playerIndex + 0.5));
+    return [insert, 0];
 }
 
 function getNewShape() {
@@ -294,8 +304,19 @@ window.onkeyup = (event) => {
 }
 
 function randomColor() {
-    function randomPart() { return ["4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e"][Math.floor(Math.random() * 11)]; }
-    return "#" + randomPart() + randomPart() + randomPart() + randomPart() + randomPart() + randomPart();
+    let parts = shuffleArray(["f", "d", "b", "8", "6", "4"]);
+
+    return "#" + parts[0] + parts[1] + parts[2];
+}
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        let temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+    return array;
 }
 
 function handleInputs() {
@@ -388,21 +409,23 @@ function drawFrame() {
 
         drawState();
 
-        let currentBlock = getBlockPositions(currentBlockCenter, currentRotation);
-        let percentage = block ? ((oldInputTimestamp - blockedSince) / maxBlock) : null;
+        if (currentBlockCenter) {
+            let currentBlock = getBlockPositions(currentBlockCenter, currentRotation);
+            let percentage = block ? ((oldInputTimestamp - blockedSince) / maxBlock) : null;
 
-        console.log(oldInputTimestamp, blockedSince, oldInputTimestamp - blockedSince, percentage);
+            for (let [x, y] of currentBlock) {
+                drawBlock(y, x, { color: playerColor, isActive: true }, percentage);
+            }
 
-        for (let [x, y] of currentBlock) {
-            drawBlock(x, y, { color: playerColor, isActive: true }, percentage);
-        }
-
-        for (let player of players) {
-            if (player.centerPosition && player.id != playerId) {
-                drawPlayer(player.centerPosition.x, player.centerPosition.y, player.name);
+            for (let player of players) {
+                if (player.centerPosition && player.id != playerId) {
+                    drawPlayer(player.centerPosition.x, player.centerPosition.y, player.name);
+                }
             }
         }
 
+        let alivePlayers = players.filter(p => !p.isDead);
+        inserts.innerHTML = alivePlayers.map((p, i) => `<div style="--color: ${p.color};left: ${offset(alivePlayers.length, i)}px"></div>`).join("");
         health.innerHTML = players.map((p) => `<div style="--color: ${p.color}">${p.name} ${p.health} ${(p.isDead ? "(dead)" : "")} ${(p.ready ? "" : "(not ready)")}</div>`).join("");
     }
 }
@@ -430,6 +453,12 @@ function gameLoop(timeStamp) {
     drawFrame();
 
     window.requestAnimationFrame(gameLoop);
+}
+
+function offset(playerCount, index) {
+    let playerWidth = width / playerCount;
+
+    return Math.round(playerWidth * (index + 0.5));
 }
 
 joinButton.onclick = initGame;

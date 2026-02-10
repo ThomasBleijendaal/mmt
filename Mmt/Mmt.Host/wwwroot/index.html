@@ -11,12 +11,15 @@
             font-family: 'Courier New', Courier, monospace;
             font-weight: bold;
             position: relative;
+            width: 1600px;
+            margin: 0 auto;
         }
 
-        .hidden { display: none; }
+        .hidden {
+            display: none;
+        }
 
-        #init-screen
-        {
+        #init-screen {
             position: absolute;
             top: 0px;
             left: 0px;
@@ -26,8 +29,7 @@
             padding: 30px;
         }
 
-        #join-screen
-        {
+        #join-screen {
             position: absolute;
             top: 0px;
             left: 0px;
@@ -38,8 +40,7 @@
             padding: 30px;
         }
 
-        #death-screen
-        {
+        #death-screen {
             position: absolute;
             top: 0px;
             left: 0px;
@@ -51,8 +52,7 @@
             text-transform: uppercase;
         }
 
-        #win-screen
-        {
+        #win-screen {
             position: absolute;
             top: 0px;
             left: 0px;
@@ -64,24 +64,42 @@
             text-transform: uppercase;
         }
 
+        #inserts {
+            position: relative;
+
+            div {
+                position: absolute;
+                width: 0px;
+                height: 0px;
+                border-left: 10px solid transparent;
+                border-right: 10px solid transparent;
+                border-top: 20px solid var(--color);
+            }
+        }
+
         #health,
         #rowsCleared {
             font-size: 20px;
         }
 
-        #health div {
-            margin-bottom: 10px;
-        }
+        #health {
+            float: right;
+            padding: 10px;
 
-        #health div::before {
-            float: left;
-            content: " ";
-            display: block;
-            width: 18px;
-            height: 18px;
-            margin: 0px 10px 0 0px;
-            border: 2px solid white;
-            background-color: var(--color);
+            div {
+                margin-bottom: 10px;
+
+                &::before {
+                    float: left;
+                    content: " ";
+                    display: block;
+                    width: 18px;
+                    height: 18px;
+                    margin: 0px 10px 0 0px;
+                    border: 2px solid white;
+                    background-color: var(--color);
+                }
+            }
         }
     </style>
 </head>
@@ -99,10 +117,11 @@
     </div>
 
     <div id="game-screen" class="hidden">
+        <div id="inserts"></div>
+
         <canvas id="game" width="961" height="961"></canvas>
 
-        <div id="health">
-        </div>
+        <div id="health"></div>
     </div>
 
     <div id="death-screen" class="hidden">

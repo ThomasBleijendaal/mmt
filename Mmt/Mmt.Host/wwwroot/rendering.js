@@ -25,7 +25,7 @@ function drawState() {
         for (let c = 0; c < columns(); c++) {
             let block = blockState[r][c];
             if (block.color != null) {
-                drawBlock(c, r, block);
+                drawBlock(r, c, block, null, null);
             }
         }
     }
@@ -36,27 +36,27 @@ function drawBlock(r, c, block, blockPercentage) {
 
     ctx.beginPath();
     ctx.fillStyle = block.color;
-    ctx.rect(r * squareSize + 1, c * squareSize + 1, squareSize - 1, squareSize - 1);
+    ctx.rect(c * squareSize + 1, r * squareSize + 1, squareSize - 1, squareSize - 1);
     ctx.fill();
 
     if (blockPercentage > 0) {
         ctx.beginPath();
         ctx.globalAlpha = blockPercentage;
         ctx.fillStyle = "#ff0000";
-        ctx.rect(r * squareSize + 1, c * squareSize + 1, squareSize - 1, squareSize - 1);
+        ctx.rect(c * squareSize + 1, r * squareSize + 1, squareSize - 1, squareSize - 1);
         ctx.fill();
 
         ctx.beginPath();
         ctx.globalAlpha = 1;
         ctx.fillStyle = block.color;
-        ctx.rect(r * squareSize + 3, c * squareSize + 3, squareSize - 5, squareSize - 5);
+        ctx.rect(c * squareSize + 3, r * squareSize + 3, squareSize - 5, squareSize - 5);
         ctx.fill();
     }
 
     ctx.beginPath();
     ctx.globalAlpha = block.isActive ? .8 : .3;
     ctx.fillStyle = "#ffffff";
-    ctx.rect(r * squareSize + 3, c * squareSize + 3, squareSize - 5, squareSize - 5);
+    ctx.rect(c * squareSize + 3, r * squareSize + 3, squareSize - 5, squareSize - 5);
     ctx.fill();
     
     ctx.globalAlpha = 1;
