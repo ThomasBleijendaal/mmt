@@ -24,23 +24,33 @@ public class GameState
 
     private List<PlayerState> Players { get; init; } = [];
 
+    private PlayerState[] LockSafePlayers { get { lock (Players) { return Players.ToArray(); } } }
+
     public int PlayerCount => Players.Count;
 
     public Guid? AddPlayer(string name, string color)
     {
-        if (Players.Any(p => p.Color == color))
+        if (LockSafePlayers.Any(p => p.Color == color))
         {
             return null;
         }
 
         var id = Guid.NewGuid();
 
-        Players.Add(new()
+        lock (Players)
         {
-            Color = color,
-            Name = name,
-            Id = id
-        });
+            Players.Add(new()
+            {
+                Color = color,
+                Name = name,
+                Id = id
+            });
+
+            if (Players.Count == 1)
+            {
+                Players[0].Health = 100;
+            }
+        }
 
         HandleBoardSize();
 
@@ -49,7 +59,7 @@ public class GameState
 
     public void PlaceBlock(Guid playerId, Position[] positions)
     {
-        var color = Players.FirstOrDefault(x => x.Id == playerId)?.Color;
+        var color = LockSafePlayers.FirstOrDefault(x => x.Id == playerId)?.Color;
 
         var leftoverPosition = positions.Where(p => p.Y > 3).ToArray();
 
@@ -64,29 +74,29 @@ public class GameState
         }
         else
         {
-            Players.FirstOrDefault(x => x.Id == playerId)?.Health -= 3;
+            LockSafePlayers.FirstOrDefault(x => x.Id == playerId)?.Health -= 3;
         }
     }
 
     public void UpdateCurrentBlockOfPlayer(Guid playerId, Position[] positions, Position center)
     {
-        var playerState = Players.FirstOrDefault(x => x.Id == playerId);
+        var playerState = LockSafePlayers.FirstOrDefault(x => x.Id == playerId);
         playerState?.CurrentBlock = positions;
         playerState?.CenterPosition = center;
     }
 
     public void RemoveCurrentBlockFromPlayer(Guid playerId)
     {
-        var playerState = Players.FirstOrDefault(x => x.Id == playerId);
+        var playerState = LockSafePlayers.FirstOrDefault(x => x.Id == playerId);
         playerState?.CurrentBlock = null;
         playerState?.CenterPosition = null;
     }
 
     public void ReadyPlayer(Guid id)
     {
-        Players.FirstOrDefault(x => x.Id == id)?.Ready = true;
+        LockSafePlayers.FirstOrDefault(x => x.Id == id)?.Ready = true;
 
-        if (Players.All(x => x.Ready) && Players.Count > 1)
+        if (LockSafePlayers.All(x => x.Ready) && Players.Count > 1)
         {
             Status = GameStatus.Running;
         }
@@ -94,27 +104,36 @@ public class GameState
 
     public void DropPlayer(Guid playerId)
     {
-        Players.RemoveAll(p => p.Id == playerId);
+        lock (Players)
+        {
+            Players.RemoveAll(p => p.Id == playerId);
+        }
+
         HandleBoardSize();
     }
 
     public void Reset()
     {
         Field = CreateField(_size);
-        Players.Clear();
+        lock (Players)
+        {
+            Players.Clear();
+        }
         Status = GameStatus.PreGame;
     }
 
     public NetworkGameState GetNetworkState(Guid playerId)
     {
-        if (Players.Count > 1 && Players.Count(p => p.IsDead) == Players.Count - 1)
+        var players = LockSafePlayers;
+
+        if (players.Length > 1 && players.Count(p => p.IsDead) == players.Length - 1)
         {
             Status = GameStatus.Finished;
         }
 
         var result = Field.Select(r => r.ToArray()).ToArray();
 
-        foreach (var player in Players)
+        foreach (var player in players)
         {
             if (player.CurrentBlock != null && player.Id != playerId)
             {
@@ -140,7 +159,7 @@ public class GameState
                 Color = b.Color
             }).ToArray())],
             RowsCleared = RowsCleared,
-            Players = [.. Players.Select(p => new NetworkGameState.NetworkPlayer
+            Players = [.. players.Select(p => new NetworkGameState.NetworkPlayer
             {
                 Id = p.Id,
                 Color = p.Color,
@@ -174,7 +193,10 @@ public class GameState
 
                     if (RowsCleared % 10 == 0)
                     {
-                        Players.ForEach(x => x.Health = Math.Min(100, x.Health + 20));
+                        lock (Players)
+                        {
+                            Players.ForEach(x => x.Health = Math.Min(100, x.Health + 20));
+                        }
                     }
                 }
 
@@ -204,15 +226,21 @@ public class GameState
                         _ => 0
                     };
 
-                    Players.FirstOrDefault(x => x.Color == color)?.Health -= damage;
+                    lock (Players)
+                    {
+                        Players.FirstOrDefault(x => x.Color == color)?.Health -= damage;
+                    }
                     updateBoardSize = true;
                 }
 
-                var playersNotInBlocks = Players.Except(Players.Where(p => colorsInBlocks.Contains(p.Color)));
-                foreach (var player in playersNotInBlocks)
+                lock (Players)
                 {
-                    player.Health -= 20;
-                    updateBoardSize = true;
+                    var playersNotInBlocks = Players.Except(Players.Where(p => colorsInBlocks.Contains(p.Color)));
+                    foreach (var player in playersNotInBlocks)
+                    {
+                        player.Health -= 4;
+                        updateBoardSize = true;
+                    }
                 }
 
                 for (var nr = r; nr >= rowsComplete; nr--)
@@ -235,7 +263,8 @@ public class GameState
 
     private void HandleBoardSize()
     {
-        var requiredTileSize = Players.Count(p => p.Health > 0) switch
+        var players = LockSafePlayers;
+        var requiredTileSize = players.Count(p => p.Health > 0) switch
         {
             var x when x > 8 => 1,
             var x when x > 4 => 2,

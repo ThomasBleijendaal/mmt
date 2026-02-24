@@ -43,6 +43,7 @@ const playerColor = randomColor();
 let currentHealth = 40;
 let gameStarted = false;
 let isDead = false;
+let isNr1 = false;
 let gameFinished = false;
 
 /**
@@ -91,11 +92,13 @@ async function initGame() {
         nextGameId = data.nextGameId;
 
         playerIndex = players?.filter(x => !x.isDead).findIndex(x => x.id == playerId);
+        isNr1 = false;
 
         let player = players?.find(x => x.id == playerId);
 
         if (player) {
-            currentHealth = player?.health ?? 1;
+            currentHealth = player.health ?? 1;
+            isNr1 = players.filter(x => x.id != playerId).every(x => x.health < currentHealth);
 
             if (currentHealth <= 0 && !isDead) {
                 isDead = player.isDead;
@@ -221,7 +224,7 @@ function getNewPosition() {
 
 function getNewShape() {
     let type = 0;
-    if (currentHealth > 80) {
+    if (isNr1) {
         type = Math.floor(Math.random() * insaneBlocks);
     }
     else {
@@ -234,10 +237,10 @@ function getBlockPositions(block, rotation) {
     let blockType = blockTypes[currentShape];
     let rotator =
         rotation === 0 ? ([x, y]) => [x, y] :
-            rotation === 1 ? ([x, y]) => [- y, x] :
-                rotation === 2 ? ([x, y]) => [- x, - y] :
-                    rotation === 3 ? ([x, y]) => [y, - x] :
-                        ([x, y]) => [x, y];
+        rotation === 1 ? ([x, y]) => [- y, x] :
+        rotation === 2 ? ([x, y]) => [- x, - y] :
+        rotation === 3 ? ([x, y]) => [y, - x] :
+                         ([x, y]) => [x, y];
 
     let positions = blockType.map(rotator).map(([x, y]) => [block[0] + x, block[1] + y]);
     return positions;
@@ -250,7 +253,6 @@ window.onkeydown = (event) => {
 
     if (event.code === "ArrowLeft") {
         event.preventDefault();
-
         if (!left) {
             oldInputTimestamp = 0;
         }
@@ -259,7 +261,6 @@ window.onkeydown = (event) => {
     }
     if (event.code === "ArrowRight") {
         event.preventDefault();
-
         if (!right) {
             oldInputTimestamp = 0;
         }
@@ -267,11 +268,17 @@ window.onkeydown = (event) => {
         right = true;
     }
     if (event.code === "ArrowDown") {
+        event.preventDefault();
         if (!block) {
             blockedSince = oldInputTimestamp;
             block = true;
         }
+    }
+    if (event.code === "Space") {
         event.preventDefault();
+        if (!block) {
+            smashDown();
+        }
     }
 }
 
@@ -281,31 +288,29 @@ window.onkeyup = (event) => {
     }
 
     if (event.code === "ArrowUp") {
+        event.preventDefault();
         let newRotation = (currentRotation + 1) % 4;
         let [_, hasCollision] = willCollide(currentBlockCenter, newRotation, xy => xy);
         if (!hasCollision) {
             currentRotation = newRotation;
         }
-
-        event.preventDefault();
     }
     if (event.code === "ArrowLeft") {
-        left = false;
         event.preventDefault();
+        left = false;
     }
     if (event.code === "ArrowRight") {
-        right = false;
         event.preventDefault();
+        right = false;
     }
     if (event.code === "ArrowDown") {
-        block = false;
         event.preventDefault();
+        block = false;
     }
 }
 
 function randomColor() {
     let parts = shuffleArray(["f", "d", "b", "8", "6", "4"]);
-
     return "#" + parts[0] + parts[1] + parts[2];
 }
 
@@ -358,7 +363,7 @@ function handleState() {
         let [currentBlock, hasCollision] = willCollide(currentBlockCenter, currentRotation, ([x, y]) => [x, y + 1]);
 
         if (hasCollision) {
-            placeBlock(currentBlock);
+            placeBlock(currentBlock, currentBlockCenter);
         }
         else {
             moveBlock();
@@ -367,22 +372,36 @@ function handleState() {
     else if (block && blockState) {
         if (oldInputTimestamp - blockedSince > maxBlock) {
             let currentBlock = getBlockPositions(currentBlockCenter, currentRotation);
-            placeBlock(currentBlock);
+            placeBlock(currentBlock, currentBlockCenter);
             block = false;
         }
     }
 }
 
-function placeBlock(currentBlock) {
-    for (var [x, y] of currentBlock) {
+function smashDown() {
+    let bottomRow = rows();
+    for (let r = bottomRow - 1; r > currentBlockCenter[1]; r--) {
+        let [positions, hasCollision] = willCollide([currentBlockCenter[0], r], currentRotation, ([x, y]) => [x, y]);
+
+        let allInScreen = positions.every(([x, y]) => y < bottomRow);
+
+        if (!hasCollision && allInScreen) {
+            placeBlock(positions, [currentBlockCenter[0], r]);
+            break;
+        }
+    }
+}
+
+function placeBlock(placedBlock, placedBlockCenter) {
+    for (let [x, y] of placedBlock) {
         if (x >= 0 && x < columns() && y >= 0 && y < rows()) {
             blockState[y][x].color = playerColor;
         }
     }
 
     let json = JSON.stringify({
-        currentBlock: getBlockPositions(currentBlockCenter, currentRotation),
-        centerPosition: currentBlockCenter,
+        currentBlock: placedBlock,
+        centerPosition: placedBlockCenter,
         blockPlaced: true
     });
     ws.send(json);

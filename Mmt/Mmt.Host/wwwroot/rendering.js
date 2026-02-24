@@ -7,14 +7,19 @@ function drawBackground() {
 
     for (let r = 0; r < rows() + 1; r++) {
         ctx.beginPath();
-        ctx.fillStyle = "#444444";
+        if (r < 4) {
+            ctx.fillStyle = "#222222";
+        }
+        else {
+            ctx.fillStyle = "#666666";
+        }
         ctx.rect(0, r * squareSize, width, 1);
         ctx.fill();
     }
 
     for (let c = 0; c < columns() + 1; c++) {
         ctx.beginPath();
-        ctx.fillStyle = "#444444";
+        ctx.fillStyle = "#666666";
         ctx.rect(c * squareSize, 0, 1, height);
         ctx.fill();
     }
@@ -58,7 +63,7 @@ function drawBlock(r, c, block, blockPercentage) {
     ctx.fillStyle = "#ffffff";
     ctx.rect(c * squareSize + 3, r * squareSize + 3, squareSize - 5, squareSize - 5);
     ctx.fill();
-    
+
     ctx.globalAlpha = 1;
 }
 
