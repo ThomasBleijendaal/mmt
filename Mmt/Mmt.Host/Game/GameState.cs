@@ -45,11 +45,6 @@ public class GameState
                 Name = name,
                 Id = id
             });
-
-            if (Players.Count == 1)
-            {
-                Players[0].Health = 100;
-            }
         }
 
         HandleBoardSize();
