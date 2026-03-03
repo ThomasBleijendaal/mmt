@@ -25,6 +25,22 @@ function drawBackground() {
     }
 }
 
+function drawVerticalIndicator(block) {
+    let squareSize = size();
+    let uniqueYs = [...new Set(block.map(([x, y]) => x))];
+
+    ctx.globalAlpha = .1;
+
+    for (var y of uniqueYs) {
+        ctx.beginPath();
+        ctx.fillStyle = "#ffffff";
+        ctx.rect(y * squareSize, 0, squareSize, height);
+        ctx.fill();
+    }
+
+    ctx.globalAlpha = 1;
+}
+
 function drawState() {
     for (let r = 0; r < rows(); r++) {
         for (let c = 0; c < columns(); c++) {

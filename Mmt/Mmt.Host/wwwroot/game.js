@@ -16,7 +16,7 @@ const ctx = canvas.getContext("2d");
 const width = canvas.width;
 const height = canvas.height;
 
-const squareSize = 16;
+const squareSize = 12;
 let currentTileSize = 4;
 
 function rows() { return Math.floor(height / squareSize / currentTileSize); }
@@ -85,7 +85,7 @@ async function initGame() {
         let data = JSON.parse(event.data);
         players = data.players;
         blockState = data.blockState;
-        
+
         cleared = data.rowsCleared;
         currentTileSize = data.tileSize;
         gameStarted = !gameFinished && (data.status == "Running" || data.status == "Finished");
@@ -426,10 +426,15 @@ function drawFrame() {
     if (blockState && players) {
         drawBackground();
 
+        let currentBlock = currentBlockCenter ? getBlockPositions(currentBlockCenter, currentRotation) : null;
+
+        if (currentBlock) {
+            drawVerticalIndicator(currentBlock);
+        }
+
         drawState();
 
-        if (currentBlockCenter) {
-            let currentBlock = getBlockPositions(currentBlockCenter, currentRotation);
+        if (currentBlock) {
             let percentage = block ? ((oldInputTimestamp - blockedSince) / maxBlock) : null;
 
             for (let [x, y] of currentBlock) {

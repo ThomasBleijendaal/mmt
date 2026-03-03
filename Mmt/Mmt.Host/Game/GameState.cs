@@ -1,4 +1,5 @@
-﻿using Mmt.Host.Models;
+﻿using System.Collections.Immutable;
+using Mmt.Host.Models;
 
 namespace Mmt.Host.Game;
 
@@ -22,30 +23,25 @@ public class GameState
 
     private List<List<Block>> Field { get; set; }
 
-    private List<PlayerState> Players { get; init; } = [];
-
-    private PlayerState[] LockSafePlayers { get { lock (Players) { return Players.ToArray(); } } }
+    private ImmutableList<PlayerState> Players { get; set; } = [];
 
     public int PlayerCount => Players.Count;
 
     public Guid? AddPlayer(string name, string color)
     {
-        if (LockSafePlayers.Any(p => p.Color == color))
+        if (Players.Any(p => p.Color == color))
         {
             return null;
         }
 
         var id = Guid.NewGuid();
 
-        lock (Players)
+        Players = Players.Add(new()
         {
-            Players.Add(new()
-            {
-                Color = color,
-                Name = name,
-                Id = id
-            });
-        }
+            Color = color,
+            Name = name,
+            Id = id
+        });
 
         HandleBoardSize();
 
@@ -54,7 +50,7 @@ public class GameState
 
     public void PlaceBlock(Guid playerId, Position[] positions)
     {
-        var color = LockSafePlayers.FirstOrDefault(x => x.Id == playerId)?.Color;
+        var color = Players.FirstOrDefault(x => x.Id == playerId)?.Color;
 
         var leftoverPosition = positions.Where(p => p.Y > 3).ToArray();
 
@@ -69,29 +65,29 @@ public class GameState
         }
         else
         {
-            LockSafePlayers.FirstOrDefault(x => x.Id == playerId)?.Health -= 3;
+            Players.FirstOrDefault(x => x.Id == playerId)?.Health -= 3;
         }
     }
 
     public void UpdateCurrentBlockOfPlayer(Guid playerId, Position[] positions, Position center)
     {
-        var playerState = LockSafePlayers.FirstOrDefault(x => x.Id == playerId);
+        var playerState = Players.FirstOrDefault(x => x.Id == playerId);
         playerState?.CurrentBlock = positions;
         playerState?.CenterPosition = center;
     }
 
     public void RemoveCurrentBlockFromPlayer(Guid playerId)
     {
-        var playerState = LockSafePlayers.FirstOrDefault(x => x.Id == playerId);
+        var playerState = Players.FirstOrDefault(x => x.Id == playerId);
         playerState?.CurrentBlock = null;
         playerState?.CenterPosition = null;
     }
 
     public void ReadyPlayer(Guid id)
     {
-        LockSafePlayers.FirstOrDefault(x => x.Id == id)?.Ready = true;
+        Players.FirstOrDefault(x => x.Id == id)?.Ready = true;
 
-        if (LockSafePlayers.All(x => x.Ready) && Players.Count > 1)
+        if (Players.All(x => x.Ready) && Players.Count > 1)
         {
             Status = GameStatus.Running;
         }
@@ -99,10 +95,7 @@ public class GameState
 
     public void DropPlayer(Guid playerId)
     {
-        lock (Players)
-        {
-            Players.RemoveAll(p => p.Id == playerId);
-        }
+        Players = Players.RemoveAll(p => p.Id == playerId);
 
         HandleBoardSize();
     }
@@ -110,18 +103,15 @@ public class GameState
     public void Reset()
     {
         Field = CreateField(_size);
-        lock (Players)
-        {
-            Players.Clear();
-        }
+        Players = Players.Clear();
         Status = GameStatus.PreGame;
     }
 
     public NetworkGameState GetNetworkState(Guid playerId)
     {
-        var players = LockSafePlayers;
+        var players = Players;
 
-        if (players.Length > 1 && players.Count(p => p.IsDead) == players.Length - 1)
+        if (players.Count > 1 && players.Count(p => p.IsDead) == players.Count - 1)
         {
             Status = GameStatus.Finished;
         }
@@ -149,10 +139,7 @@ public class GameState
         return new NetworkGameState
         {
             NextGameId = NextGameId,
-            BlockState = [.. result.Select(r => r.Select(b => new NetworkGameState.NetworkBlock
-            {
-                Color = b.Color
-            }).ToArray())],
+            BlockState = [.. result.Select(r => r.Select(MapBlock).ToArray())],
             RowsCleared = RowsCleared,
             Players = [.. players.Select(p => new NetworkGameState.NetworkPlayer
             {
@@ -167,6 +154,24 @@ public class GameState
             TileSize = TileSize,
             Status = Status.ToString()
         };
+    }
+
+    private readonly Dictionary<string, NetworkGameState.NetworkBlock> _blockCache = new();
+
+    private NetworkGameState.NetworkBlock MapBlock(Block block)
+    {
+        if (block.Color == null)
+        {
+            return NetworkGameState.NetworkBlock.NullBlock;
+        }
+        else if (_blockCache.TryGetValue(block.Color, out var value))
+        {
+            return value;
+        }
+        else
+        {
+            return _blockCache[block.Color] = new() { Color = block.Color };
+        }
     }
 
     private void HandleCompleteRows()
@@ -188,10 +193,7 @@ public class GameState
 
                     if (RowsCleared % 10 == 0)
                     {
-                        lock (Players)
-                        {
-                            Players.ForEach(x => x.Health = Math.Min(100, x.Health + 20));
-                        }
+                        Players.ForEach(x => x.Health = Math.Min(100, x.Health + 20));
                     }
                 }
 
@@ -221,10 +223,7 @@ public class GameState
                         _ => 0
                     };
 
-                    lock (Players)
-                    {
-                        Players.FirstOrDefault(x => x.Color == color)?.Health -= damage;
-                    }
+                    Players.FirstOrDefault(x => x.Color == color)?.Health -= damage;
                     updateBoardSize = true;
                 }
 
@@ -258,7 +257,7 @@ public class GameState
 
     private void HandleBoardSize()
     {
-        var players = LockSafePlayers;
+        var players = Players;
         var requiredTileSize = players.Count(p => p.Health > 0) switch
         {
             var x when x > 8 => 1,

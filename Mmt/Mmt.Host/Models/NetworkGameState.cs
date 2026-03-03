@@ -16,6 +16,8 @@ public record NetworkGameState
 
     public record NetworkBlock
     {
+        public static readonly NetworkBlock NullBlock = new() { Color = null };
+
         public required string? Color { get; init; }
     }
 

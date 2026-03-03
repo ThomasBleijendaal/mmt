@@ -41,7 +41,7 @@ internal class WebSocketSendingService : BackgroundService
         // if we do that, this class should have the same shape as the reading variant
         var state = gameState.GetNetworkState(playerId);
 
-        var array = ArrayPool<byte>.Shared.Rent(64 * 1024);
+        var array = ArrayPool<byte>.Shared.Rent(256 * 1024);
 
         try
         {
