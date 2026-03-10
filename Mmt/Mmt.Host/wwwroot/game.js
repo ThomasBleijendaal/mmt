@@ -16,7 +16,7 @@ const ctx = canvas.getContext("2d");
 const width = canvas.width;
 const height = canvas.height;
 
-const squareSize = 12;
+const squareSize = 16;
 let currentTileSize = 4;
 
 function rows() { return Math.floor(height / squareSize / currentTileSize); }
@@ -142,11 +142,14 @@ function joinGame() {
 function playerDead() {
     deathScreen.classList.remove("hidden");
     currentBlockCenter = [];
+    AudioManager.playLoseSound();
 }
 
 function playerWon() {
     winScreen.classList.remove("hidden");
     currentBlockCenter = [];
+
+    AudioManager.playWinSound();
 
     restartGame();
 }
@@ -226,6 +229,9 @@ function getNewShape() {
     let type = 0;
     if (isNr1) {
         type = Math.floor(Math.random() * insaneBlocks);
+        if (type >= saneBlocks) {
+            AudioManager.playWeirdBlockSound();
+        }
     }
     else {
         type = Math.floor(Math.random() * saneBlocks);
@@ -247,6 +253,8 @@ function getBlockPositions(block, rotation) {
 }
 
 window.onkeydown = (event) => {
+    AudioManager.init();
+
     if (!gameStarted || isDead) {
         return;
     }
@@ -258,6 +266,7 @@ window.onkeydown = (event) => {
         }
 
         left = true;
+        AudioManager.playMoveSound();
     }
     if (event.code === "ArrowRight") {
         event.preventDefault();
@@ -266,6 +275,7 @@ window.onkeydown = (event) => {
         }
 
         right = true;
+        AudioManager.playMoveSound();
     }
     if (event.code === "ArrowDown") {
         event.preventDefault();
@@ -278,6 +288,7 @@ window.onkeydown = (event) => {
         event.preventDefault();
         if (!block) {
             smashDown();
+            AudioManager.playDownSound();
         }
     }
 }
@@ -293,6 +304,7 @@ window.onkeyup = (event) => {
         let [_, hasCollision] = willCollide(currentBlockCenter, newRotation, xy => xy);
         if (!hasCollision) {
             currentRotation = newRotation;
+            AudioManager.playRotateSound();
         }
     }
     if (event.code === "ArrowLeft") {
@@ -364,13 +376,21 @@ function handleState() {
 
         if (hasCollision) {
             placeBlock(currentBlock, currentBlockCenter);
+            AudioManager.playPlaceSound();
         }
         else {
             moveBlock();
         }
     }
     else if (block && blockState) {
-        if (oldInputTimestamp - blockedSince > maxBlock) {
+        let delta = oldInputTimestamp - blockedSince;
+        let offset = 4 * (delta / 1000.0);
+
+        console.log(offset);
+
+        AudioManager.playBlockedSound(offset);
+
+        if (delta > maxBlock) {
             let currentBlock = getBlockPositions(currentBlockCenter, currentRotation);
             placeBlock(currentBlock, currentBlockCenter);
             block = false;

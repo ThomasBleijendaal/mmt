@@ -101,6 +101,25 @@
                 }
             }
         }
+
+        ul {
+            list-style: none;
+        }
+
+        kbd {
+            background-color: #eeeeee;
+            border-radius: 3px;
+            border: 1px solid #b4b4b4;
+            box-shadow: 0 1px 1px rgb(0 0 0 / 0.2), 0 2px 0 0 rgb(255 255 255 / 0.7) inset;
+            color: #333333;
+            display: inline-block;
+            font-size: 0.85em;
+            font-weight: bold;
+            line-height: 1;
+            padding: 2px 4px;
+            white-space: nowrap;
+        }
+
     </style>
 </head>
 
@@ -113,6 +132,14 @@
 
     <div id="join-screen" class="hidden">
         <pre id="share-url"></pre>
+
+        <ul>
+            <li>Use <kbd>&larr;</kbd> and <kbd>&rarr;</kbd> to move</li>
+            <li>Use <kbd>&darr;</kbd> to block</li>
+            <li>Use <kbd>&uarr;</kbd> to rotate</li>
+            <li>Use <kbd>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</kbd> to smash down</li>
+        </ul>
+
         <button id="ready">READY</button>
     </div>
 
@@ -132,6 +159,7 @@
         You won
     </div>
 
+    <script src="./audio.js"></script>
     <script src="./rendering.js"></script>
     <script src="./game.js"></script>
 </body>

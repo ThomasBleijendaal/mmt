@@ -14,7 +14,7 @@ builder.WebHost.UseStaticWebAssets();
 
 var channel = Channel.CreateUnbounded<PlayerUpdate>();
 
-var gameStateRepo = new GameStateRepository(80);
+var gameStateRepo = new GameStateRepository(60);
 
 var jsonSerializerOptions = new JsonSerializerOptions
 {

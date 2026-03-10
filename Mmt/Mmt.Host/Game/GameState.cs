@@ -179,10 +179,10 @@ public class GameState
         var width = _size / TileSize;
         for (var r = Field.Count - 1; r >= 0; r--)
         {
-            if (Field[r].Take(width).All(x => !x.IsEmpty))
+            if (Field[r].RowFull(width, TileSize))
             {
                 var rowsComplete = 1;
-                while (rowsComplete <= r && Field[r - rowsComplete].Take(width).All(b => !b.IsEmpty))
+                while (rowsComplete <= r && Field[r - rowsComplete].RowFull(width, TileSize))
                 {
                     rowsComplete++;
                 }
@@ -209,8 +209,6 @@ public class GameState
 
                 var maxPercentage = percentages.Max(x => x.percentage);
 
-                var updateBoardSize = false;
-
                 var colorsInBlocks = percentages.Select(x => x.color).ToArray();
 
                 foreach (var (color, percentage) in percentages)
@@ -224,7 +222,6 @@ public class GameState
                     };
 
                     Players.FirstOrDefault(x => x.Color == color)?.Health -= damage;
-                    updateBoardSize = true;
                 }
 
                 lock (Players)
@@ -233,7 +230,6 @@ public class GameState
                     foreach (var player in playersNotInBlocks)
                     {
                         player.Health -= 4;
-                        updateBoardSize = true;
                     }
                 }
 
@@ -246,13 +242,10 @@ public class GameState
                 {
                     Field[nr] = Enumerable.Repeat(new Block(), Field[nr].Count).ToList();
                 }
-
-                if (updateBoardSize)
-                {
-                    HandleBoardSize();
-                }
             }
         }
+
+        HandleBoardSize();
     }
 
     private void HandleBoardSize()

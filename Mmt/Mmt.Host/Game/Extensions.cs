@@ -14,6 +14,15 @@ public static class Extensions
         public Position[] ToPositions() => [.. input.Select(d => d.ToPosition())];
     }
 
+    extension(IEnumerable<Block> blocks)
+    {
+        public bool RowFull(int width, int tileSize)
+        {
+            var maxEmpty = (2 * (4 - tileSize));
+            return blocks.Take(width).Count(x => x.IsEmpty) <= maxEmpty;
+        }
+    }
+
     extension(List<List<Block>> list)
     {
         public void SetColor(Position pos, string? color)
