@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="EventCore/EventCore.csproj" Id="142606f4-4b4e-417c-b70a-819c3f7a64a1" />
   <Project Path="Mmt.Host/Mmt.Host.csproj" />
 </Solution>
