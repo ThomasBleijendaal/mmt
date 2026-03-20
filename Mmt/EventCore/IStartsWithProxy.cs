@@ -9,4 +9,3 @@ internal interface IStartsWithProxy
 {
     IEntity Create(ICreateEvent createEvent);
 }
-

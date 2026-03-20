@@ -1,6 +1,6 @@
 ﻿using Mmt.Host.Models;
 
-namespace Mmt.Host.Game;
+namespace Mmt.Host;
 
 public static class Helper
 {

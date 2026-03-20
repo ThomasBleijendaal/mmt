@@ -1,19 +1,20 @@
 ﻿using System.Threading.Channels;
+using Mmt.Host.Game.Events;
 using Mmt.Host.Models;
 
 namespace Mmt.Host.Game;
 
 public class GameService : BackgroundService
 {
-    private readonly GameStateRepository _gameStateRepository;
     private readonly ChannelReader<PlayerUpdate> _playerChannel;
+    private readonly EventCore.ISession _session;
 
     public GameService(
-        GameStateRepository gameStateRepository,
+        EventCore.ISession session,
         Channel<PlayerUpdate> playerChannel)
     {
-        _gameStateRepository = gameStateRepository;
         _playerChannel = playerChannel.Reader;
+        _session = session;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -26,30 +27,33 @@ public class GameService : BackgroundService
             {
                 if (_playerChannel.TryRead(out var playerUpdate))
                 {
-                    var gameState = _gameStateRepository.GetGame(playerUpdate.GameId);
-
                     if (playerUpdate.Update is PlayerStateUpdate playerState)
                     {
                         if (playerState.BlockPlaced)
                         {
-                            gameState.PlaceBlock(
+                            await _session.Events.AppendAsync(new PlaceBlock(
+                                playerUpdate.GameId,
                                 playerUpdate.PlayerId,
-                                playerState.CurrentBlock.ToPositions());
+                                playerState.CurrentBlock.ToPositions()));
 
-                            gameState.RemoveCurrentBlockFromPlayer(
-                                playerUpdate.PlayerId);
+                            await _session.Events.AppendAsync(new RemovePlayerBlock(
+                                playerUpdate.GameId,
+                                playerUpdate.PlayerId));
                         }
                         else
                         {
-                            gameState.UpdateCurrentBlockOfPlayer(
+                            await _session.Events.AppendAsync(new UpdatePlayerBlockPosition(
+                                playerUpdate.GameId,
                                 playerUpdate.PlayerId,
                                 playerState.CurrentBlock.ToPositions(),
-                                playerState.CenterPosition.ToPosition());
+                                playerState.CenterPosition.ToPosition()));
                         }
                     }
                     else if (playerUpdate.Update is ReadyUpdate)
                     {
-                        gameState.ReadyPlayer(playerUpdate.PlayerId);
+                        await _session.Events.AppendAsync(new ReadyPlayer(
+                            playerUpdate.GameId,
+                            playerUpdate.PlayerId));
                     }
                 }
             }

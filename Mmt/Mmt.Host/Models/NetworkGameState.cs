@@ -2,6 +2,7 @@
 
 public record NetworkGameState
 {
+    // TODO: move to join response
     public required Guid NextGameId { get; init; }
 
     public required NetworkBlock[][] BlockState { get; init; }

@@ -1,17 +1,17 @@
 ﻿using System.Collections.Concurrent;
 using System.Net.WebSockets;
-using Mmt.Host.Game;
+using Mmt.Host.Game.Events;
 
 namespace Mmt.Host.WebSockets;
 
 internal class WebSocketHandler
 {
     private readonly ConcurrentDictionary<WebSocket, WebSocketRegistration> _webSockets = new();
-    private readonly GameStateRepository _gameStateRepository;
+    private readonly EventCore.ISession _session;
 
-    public WebSocketHandler(GameStateRepository gameStateRepository)
+    public WebSocketHandler(EventCore.ISession session)
     {
-        _gameStateRepository = gameStateRepository;
+        _session = session;
     }
 
     public Task AddWebSocketAsync(Guid gameId, Guid playerId, WebSocket ws)
@@ -67,7 +67,7 @@ internal class WebSocketHandler
 
         if (_webSockets.TryRemove(ws, out var registration))
         {
-            _gameStateRepository.GetGame(registration.GameId).DropPlayer(registration.PlayerId);
+            await _session.Events.AppendAsync(new DropPlayer(registration.GameId, registration.PlayerId));
             registration.TaskCompletionSource.SetResult();
         }
     }

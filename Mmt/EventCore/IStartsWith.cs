@@ -1,8 +1,8 @@
 ﻿namespace EventCore;
 
-public interface IStartsWith<T, TCommand>
-    where TCommand : ICreateEvent
+public interface IStartsWith<TEvent, TEntity>
+    where TEvent : ICreateEvent
+    where TEntity : IEntity
 {
-    static abstract T Create(TCommand command);
+    static abstract TEntity Create(TEvent command);
 }
-

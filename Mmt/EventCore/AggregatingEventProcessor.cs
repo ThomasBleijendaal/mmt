@@ -6,20 +6,22 @@ namespace EventCore;
 internal class AggregatingEventProcessor : BackgroundService
 {
     private readonly ChannelReader<IEvent> _eventChannel;
-    private readonly ChannelWriter<EventEntity> _entityChannel;
+    private readonly EntityCache _entityCache;
+    private readonly IServiceProvider _serviceProvider;
     private readonly StartsWithEventRegistration[] _startsWithEventRegistrations;
     private readonly HandlesEventRegistration[] _handlesEventRegistrations;
 
-    private readonly Dictionary<Guid, IEntity> _entities = new();
 
     public AggregatingEventProcessor(
         ChannelReader<IEvent> eventChannel,
-        ChannelWriter<EventEntity> entityChannel,
+        EntityCache entityCache,
+        IServiceProvider serviceProvider,
         IEnumerable<StartsWithEventRegistration> startsWithEventRegistrations,
         IEnumerable<HandlesEventRegistration> handlesEventRegistrations)
     {
         _eventChannel = eventChannel;
-        _entityChannel = entityChannel;
+        _entityCache = entityCache;
+        _serviceProvider = serviceProvider;
         _startsWithEventRegistrations = startsWithEventRegistrations.ToArray();
         _handlesEventRegistrations = handlesEventRegistrations.ToArray();
     }
@@ -33,14 +35,14 @@ internal class AggregatingEventProcessor : BackgroundService
                 var entities = _startsWithEventRegistrations.CreateEntities(createEvent);
                 foreach (var entity in entities)
                 {
-                    _entities[entity.Id] = entity;
-                    await _entityChannel.WriteAsync(new(@event, entity));
+                    _entityCache.SetEntity(entity);
+                    await _serviceProvider.BroadcastEventAsync(@event, entity);
                 }
             }
-            else if (_entities.TryGetValue(@event.Id, out var entity))
+            else if (_entityCache.GetEntity(@event.Id) is IEntity entity)
             {
-                _entities[@event.Id] = _handlesEventRegistrations.Handle(@event, entity);
-                await _entityChannel.WriteAsync(new(@event, entity));
+                _entityCache.SetEntity(_handlesEventRegistrations.Handle(@event, entity));
+                await _serviceProvider.BroadcastEventAsync(@event, entity);
             }
 
             // log about this?

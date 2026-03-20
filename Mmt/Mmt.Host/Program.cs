@@ -1,7 +1,10 @@
 ﻿using System.Text.Json;
 using System.Threading.Channels;
+using EventCore;
 using Microsoft.AspNetCore.Mvc;
 using Mmt.Host.Game;
+using Mmt.Host.Game.EventHandlers;
+using Mmt.Host.Game.Events;
 using Mmt.Host.Models;
 using Mmt.Host.WebSockets;
 
@@ -14,7 +17,7 @@ builder.WebHost.UseStaticWebAssets();
 
 var channel = Channel.CreateUnbounded<PlayerUpdate>();
 
-var gameStateRepo = new GameStateRepository(60);
+//var gameStateRepo = new GameStateRepository(60);
 
 var jsonSerializerOptions = new JsonSerializerOptions
 {
@@ -22,7 +25,15 @@ var jsonSerializerOptions = new JsonSerializerOptions
     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 };
 
-builder.Services.AddSingleton(gameStateRepo);
+builder.Services.AddEventCore();
+builder.Services.AddInMemoryStorage();
+builder.Services.AddEntity<GameEntity>();
+builder.Services.AddEventListener<BoardSizeHandler>();
+builder.Services.AddEventListener<PlayerReadyHandler>();
+builder.Services.AddEventListener<PlaceBlockDamageHandler>();
+builder.Services.AddEventListener<ClearRowsHandler>();
+
+//builder.Services.AddSingleton(gameStateRepo);
 builder.Services.AddSingleton(jsonSerializerOptions);
 builder.Services.AddSingleton(channel);
 builder.Services.AddHostedService<GameService>();
@@ -42,32 +53,43 @@ app.UseStaticFiles();
 app.UseCors(b => b.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
 app.UseWebSockets(new() { KeepAliveInterval = TimeSpan.FromSeconds(10) });
 
-app.MapPost("/join", ([FromQuery(Name = "gameId")] string? gameIdString, [FromBody] PlayerJoinRequest request) =>
+app.MapPost("/join",
+    async ([FromQuery(Name = "gameId")] string? gameIdString,
+    [FromBody] PlayerJoinRequest request,
+    [FromServices] EventCore.ISession session) =>
 {
     var gameId = Guid.TryParse(gameIdString, out var gameIdGuid) ? gameIdGuid : Guid.NewGuid();
 
-    var gameState = gameStateRepo.GetGame(gameId);
+    var game = await session.Events.AggregateStreamAsync<GameEntity>(gameId);
 
-    if (gameState.Status == GameStatus.Finished)
+    if (game?.Status == GameStatus.Finished)
     {
-        gameState.Reset();
+        // TODO: add finished game state + handling
+        return Results.InternalServerError();
+        // gameState.Reset();
     }
 
-    if (gameState.Status == GameStatus.Running)
+    if (game?.Status == GameStatus.Running)
     {
         return Results.BadRequest("Game already started");
     }
 
-    var id = gameState.AddPlayer(request.Name, request.Color);
-    if (id == null)
+    if (game == null)
     {
-        return Results.BadRequest("Duplicate color");
+        // TODO: configure that 60
+        await session.Events.StartStreamAsync(new StartGame(gameId, 60));
     }
+
+    var playerId = Guid.NewGuid();
+
+    await session.Events.AppendAsync(new JoinGame(gameId, playerId, request.Name));
+
+    // TODO: find solution to return color + next game id here
 
     return Results.Ok(new PlayerJoinResponse
     {
         GameId = gameId,
-        PlayerId = id.Value
+        PlayerId = playerId
     });
 });
 

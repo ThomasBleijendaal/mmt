@@ -1,7 +1,8 @@
 ﻿namespace EventCore;
 
-public interface IHandles<T, TCommand>
-    where TCommand : IEvent
+public interface IHandles<TEvent, TEntity>
+    where TEvent : IEvent
+    where TEntity : IEntity
 {
-    static abstract T Handle(TCommand command, T current);
+    static abstract TEntity Handle(TEvent command, TEntity current);
 }
