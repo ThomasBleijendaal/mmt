@@ -8,16 +8,16 @@ namespace Mmt.Host.WebSockets;
 internal class WebSocketSendingService : BackgroundService
 {
     private readonly WebSocketHandler _handler;
-    private readonly GameStateRepository _gameStateRepository;
+    private readonly EventCore.ISession _session;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
 
     public WebSocketSendingService(
         WebSocketHandler handler,
-        GameStateRepository gameStateRepository,
+        EventCore.ISession session,
         JsonSerializerOptions jsonSerializerOptions)
     {
         _handler = handler;
-        _gameStateRepository = gameStateRepository;
+        _session = session;
         _jsonSerializerOptions = jsonSerializerOptions;
     }
 
@@ -27,19 +27,17 @@ internal class WebSocketSendingService : BackgroundService
         {
             await Task.Delay(TimeSpan.FromMilliseconds(1000 / 60.0), stoppingToken);
 
-            foreach (var (gameId, state) in _gameStateRepository.GetGameIds())
+            foreach (var entity in _session.EntityCache.GetActiveEntities<GameEntity>())
             {
-                await Task.WhenAll(_handler.GetAllWebSockets(gameId).Select(x => SendWebSocketAsync(state, x.playerId, x.ws, stoppingToken)));
+                await Task.WhenAll(_handler.GetAllWebSockets(entity.Id).Select(x => SendWebSocketAsync(entity, x.playerId, x.ws, stoppingToken)));
             }
         }
         while (!stoppingToken.IsCancellationRequested);
     }
 
-    private async Task SendWebSocketAsync(GameState gameState, Guid playerId, WebSocket ws, CancellationToken stoppingToken)
+    private async Task SendWebSocketAsync(GameEntity gameEntity, Guid playerId, WebSocket ws, CancellationToken stoppingToken)
     {
-        // this can wait on some channel and send the message to this web socket
-        // if we do that, this class should have the same shape as the reading variant
-        var state = gameState.GetNetworkState(playerId);
+        var state = gameEntity.GetNetworkState(playerId);
 
         var array = ArrayPool<byte>.Shared.Rent(256 * 1024);
 

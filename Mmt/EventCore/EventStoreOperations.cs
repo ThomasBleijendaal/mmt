@@ -21,7 +21,7 @@ internal class EventStoreOperations : IEventStoreOperations
         _handlesEventRegistrations = handlesEventRegistrations.ToArray();
     }
 
-    public async Task StartStreamAsync<TEvent>(TEvent @event) where TEvent : IEvent
+    public async Task StartStreamAsync<TEvent>(TEvent @event) where TEvent : ICreateEvent
     {
         await _eventStore.StoreEventAsync(@event);
         await _eventChannel.WriteAsync(@event);

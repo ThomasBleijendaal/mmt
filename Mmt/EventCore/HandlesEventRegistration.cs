@@ -1,4 +1,3 @@
 ﻿namespace EventCore;
 
-internal record HandlesEventRegistration(Type EntityType, Type EventType);
-
+internal record HandlesEventRegistration(Type EventType, Type EntityType);
