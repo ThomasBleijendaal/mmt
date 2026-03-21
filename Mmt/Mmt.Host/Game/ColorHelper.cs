@@ -11,5 +11,3 @@ internal static class ColorHelper
         return $"#{r:X1}{g:X1}{b:X1}".ToLower();
     }
 }
-
-

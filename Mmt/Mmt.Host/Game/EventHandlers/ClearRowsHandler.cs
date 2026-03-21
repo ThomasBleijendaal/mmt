@@ -27,16 +27,7 @@ public class ClearRowsHandler : IEventListener<PlaceBlock, GameEntity>
                     rowsComplete++;
                 }
 
-                // TODO: ADD in some handler
-                //for (var i = 0; i < rowsComplete; i++)
-                //{
-                //    RowsCleared++;
-
-                //    if (RowsCleared % 10 == 0)
-                //    {
-                //        Players.ForEach(x => x.Health = Math.Min(100, x.Health + 20));
-                //    }
-                //}
+                await _eventChannel.WriteAsync(new AddClearedRowsCount(@event.Id, rowsComplete));
 
                 var filledBlocks = entity.Field.Skip(r - rowsComplete + 1).Take(rowsComplete).SelectMany(x => x).ToArray();
                 var totalBlocks = (double)filledBlocks.Length;

@@ -1,352 +1,352 @@
-﻿using System.Collections.Immutable;
-using Mmt.Host.Models;
+﻿//using System.Collections.Immutable;
+//using Mmt.Host.Models;
 
-namespace Mmt.Host.Game;
+//namespace Mmt.Host.Game;
 
-public class GameState
-{
-    private readonly int _size;
+//public class GameState
+//{
+//    private readonly int _size;
 
-    public GameState(int size)
-    {
-        Field = CreateField(size);
-        _size = size;
-    }
+//    public GameState(int size)
+//    {
+//        Field = CreateField(size);
+//        _size = size;
+//    }
 
-    private int RowsCleared { get; set; } = 0;
+//    private int RowsCleared { get; set; } = 0;
 
-    private int TileSize { get; set; } = 4;
+//    private int TileSize { get; set; } = 4;
 
-    public GameStatus Status { get; private set; } = GameStatus.PreGame;
+//    public GameStatus Status { get; private set; } = GameStatus.PreGame;
 
-    private Guid NextGameId { get; init; } = Guid.NewGuid();
+//    private Guid NextGameId { get; init; } = Guid.NewGuid();
 
-    private List<List<Block>> Field { get; set; }
+//    private List<List<Block>> Field { get; set; }
 
-    private ImmutableList<PlayerState> Players { get; set; } = [];
+//    private ImmutableList<PlayerState> Players { get; set; } = [];
 
-    public int PlayerCount => Players.Count;
+//    public int PlayerCount => Players.Count;
 
-    public Guid? AddPlayer(string name, string color)
-    {
-        if (Players.Any(p => p.Color == color))
-        {
-            return null;
-        }
+//    public Guid? AddPlayer(string name, string color)
+//    {
+//        if (Players.Any(p => p.Color == color))
+//        {
+//            return null;
+//        }
 
-        var id = Guid.NewGuid();
+//        var id = Guid.NewGuid();
 
-        Players = Players.Add(new()
-        {
-            Color = color,
-            Name = name,
-            Id = id
-        });
+//        Players = Players.Add(new()
+//        {
+//            Color = color,
+//            Name = name,
+//            Id = id
+//        });
 
-        HandleBoardSize();
+//        HandleBoardSize();
 
-        return id;
-    }
+//        return id;
+//    }
 
-    public void PlaceBlock(Guid playerId, Position[] positions)
-    {
-        var color = Players.FirstOrDefault(x => x.Id == playerId)?.Color;
+//    public void PlaceBlock(Guid playerId, Position[] positions)
+//    {
+//        var color = Players.FirstOrDefault(x => x.Id == playerId)?.Color;
 
-        var leftoverPosition = positions.Where(p => p.Y > 3).ToArray();
+//        var leftoverPosition = positions.Where(p => p.Y > 3).ToArray();
 
-        if (leftoverPosition.Length > 0)
-        {
-            if (color != null)
-            {
-                Field.SetColor(leftoverPosition, color);
-            }
+//        if (leftoverPosition.Length > 0)
+//        {
+//            if (color != null)
+//            {
+//                Field.SetColor(leftoverPosition, color);
+//            }
 
-            HandleCompleteRows();
-        }
-        else
-        {
-            Players.FirstOrDefault(x => x.Id == playerId)?.Health -= 3;
-        }
-    }
+//            HandleCompleteRows();
+//        }
+//        else
+//        {
+//            Players.FirstOrDefault(x => x.Id == playerId)?.Health -= 3;
+//        }
+//    }
 
-    public void UpdateCurrentBlockOfPlayer(Guid playerId, Position[] positions, Position center)
-    {
-        var playerState = Players.FirstOrDefault(x => x.Id == playerId);
-        playerState?.CurrentBlock = positions;
-        playerState?.CenterPosition = center;
-    }
+//    public void UpdateCurrentBlockOfPlayer(Guid playerId, Position[] positions, Position center)
+//    {
+//        var playerState = Players.FirstOrDefault(x => x.Id == playerId);
+//        playerState?.CurrentBlock = positions;
+//        playerState?.CenterPosition = center;
+//    }
 
-    public void RemoveCurrentBlockFromPlayer(Guid playerId)
-    {
-        var playerState = Players.FirstOrDefault(x => x.Id == playerId);
-        playerState?.CurrentBlock = null;
-        playerState?.CenterPosition = null;
-    }
+//    public void RemoveCurrentBlockFromPlayer(Guid playerId)
+//    {
+//        var playerState = Players.FirstOrDefault(x => x.Id == playerId);
+//        playerState?.CurrentBlock = null;
+//        playerState?.CenterPosition = null;
+//    }
 
-    public void ReadyPlayer(Guid id)
-    {
-        Players.FirstOrDefault(x => x.Id == id)?.Ready = true;
+//    public void ReadyPlayer(Guid id)
+//    {
+//        Players.FirstOrDefault(x => x.Id == id)?.Ready = true;
 
-        if (Players.All(x => x.Ready) && Players.Count > 1)
-        {
-            Status = GameStatus.Running;
-        }
-    }
+//        if (Players.All(x => x.Ready) && Players.Count > 1)
+//        {
+//            Status = GameStatus.Running;
+//        }
+//    }
 
-    public void DropPlayer(Guid playerId)
-    {
-        Players = Players.RemoveAll(p => p.Id == playerId);
+//    public void DropPlayer(Guid playerId)
+//    {
+//        Players = Players.RemoveAll(p => p.Id == playerId);
 
-        HandleBoardSize();
-    }
+//        HandleBoardSize();
+//    }
 
-    public void Reset()
-    {
-        Field = CreateField(_size);
-        Players = Players.Clear();
-        Status = GameStatus.PreGame;
-    }
+//    public void Reset()
+//    {
+//        Field = CreateField(_size);
+//        Players = Players.Clear();
+//        Status = GameStatus.PreGame;
+//    }
 
-    public NetworkGameState GetNetworkState(Guid playerId)
-    {
-        var players = Players;
+//    public NetworkGameState GetNetworkState(Guid playerId)
+//    {
+//        var players = Players;
 
-        if (players.Count > 1 && players.Count(p => p.IsDead) == players.Count - 1)
-        {
-            Status = GameStatus.Finished;
-        }
+//        if (players.Count > 1 && players.Count(p => p.IsDead) == players.Count - 1)
+//        {
+//            Status = GameStatus.Finished;
+//        }
 
-        var result = Field.Select(r => r.ToArray()).ToArray();
+//        var result = Field.Select(r => r.ToArray()).ToArray();
 
-        foreach (var player in players)
-        {
-            if (player.CurrentBlock != null && player.Id != playerId)
-            {
-                foreach (var (x, y) in player.CurrentBlock)
-                {
-                    if (x < 0 || x >= Field[0].Count ||
-                        y < 0 || y >= Field.Count)
-                    {
-                        continue;
-                    }
+//        foreach (var player in players)
+//        {
+//            if (player.CurrentBlock != null && player.Id != playerId)
+//            {
+//                foreach (var (x, y) in player.CurrentBlock)
+//                {
+//                    if (x < 0 || x >= Field[0].Count ||
+//                        y < 0 || y >= Field.Count)
+//                    {
+//                        continue;
+//                    }
 
-                    var field = result[y][x];
-                    result[y][x] = field with { Color = player.Color };
-                }
-            }
-        }
+//                    var field = result[y][x];
+//                    result[y][x] = field with { Color = player.Color };
+//                }
+//            }
+//        }
 
-        return new NetworkGameState
-        {
-            NextGameId = NextGameId,
-            BlockState = [.. result.Select(r => r.Select(MapBlock).ToArray())],
-            RowsCleared = RowsCleared,
-            Players = [.. players.Select(p => new NetworkGameState.NetworkPlayer
-            {
-                Id = p.Id,
-                Color = p.Color,
-                Name = p.Name,
-                Health = p.Health,
-                IsDead = p.IsDead,
-                Ready = p.Ready,
-                CenterPosition = p.CenterPosition
-            })],
-            TileSize = TileSize,
-            Status = Status.ToString()
-        };
-    }
+//        return new NetworkGameState
+//        {
+//            NextGameId = NextGameId,
+//            BlockState = [.. result.Select(r => r.Select(MapBlock).ToArray())],
+//            RowsCleared = RowsCleared,
+//            Players = [.. players.Select(p => new NetworkGameState.NetworkPlayer
+//            {
+//                Id = p.Id,
+//                Color = p.Color,
+//                Name = p.Name,
+//                Health = p.Health,
+//                IsDead = p.IsDead,
+//                Ready = p.Ready,
+//                CenterPosition = p.CenterPosition
+//            })],
+//            TileSize = TileSize,
+//            Status = Status.ToString()
+//        };
+//    }
 
-    private readonly Dictionary<string, NetworkGameState.NetworkBlock> _blockCache = new();
+//    private readonly Dictionary<string, NetworkGameState.NetworkBlock> _blockCache = new();
 
-    private NetworkGameState.NetworkBlock MapBlock(Block block)
-    {
-        if (block.Color == null)
-        {
-            return NetworkGameState.NetworkBlock.NullBlock;
-        }
-        else if (_blockCache.TryGetValue(block.Color, out var value))
-        {
-            return value;
-        }
-        else
-        {
-            return _blockCache[block.Color] = new() { Color = block.Color };
-        }
-    }
+//    private NetworkGameState.NetworkBlock MapBlock(Block block)
+//    {
+//        if (block.Color == null)
+//        {
+//            return NetworkGameState.NetworkBlock.NullBlock;
+//        }
+//        else if (_blockCache.TryGetValue(block.Color, out var value))
+//        {
+//            return value;
+//        }
+//        else
+//        {
+//            return _blockCache[block.Color] = new() { Color = block.Color };
+//        }
+//    }
 
-    private void HandleCompleteRows()
-    {
-        var width = _size / TileSize;
-        for (var r = Field.Count - 1; r >= 0; r--)
-        {
-            if (Field[r].RowFull(width, TileSize))
-            {
-                var rowsComplete = 1;
-                while (rowsComplete <= r && Field[r - rowsComplete].RowFull(width, TileSize))
-                {
-                    rowsComplete++;
-                }
+//    private void HandleCompleteRows()
+//    {
+//        var width = _size / TileSize;
+//        for (var r = Field.Count - 1; r >= 0; r--)
+//        {
+//            if (Field[r].RowFull(width, TileSize))
+//            {
+//                var rowsComplete = 1;
+//                while (rowsComplete <= r && Field[r - rowsComplete].RowFull(width, TileSize))
+//                {
+//                    rowsComplete++;
+//                }
 
-                for (var i = 0; i < rowsComplete; i++)
-                {
-                    RowsCleared++;
+//                for (var i = 0; i < rowsComplete; i++)
+//                {
+//                    RowsCleared++;
 
-                    if (RowsCleared % 10 == 0)
-                    {
-                        Players.ForEach(x => x.Health = Math.Min(100, x.Health + 20));
-                    }
-                }
+//                    if (RowsCleared % 10 == 0)
+//                    {
+//                        Players.ForEach(x => x.Health = Math.Min(100, x.Health + 20));
+//                    }
+//                }
 
-                var filledBlocks = Field.Skip(r - rowsComplete + 1).Take(rowsComplete).SelectMany(x => x).ToArray();
-                var totalBlocks = (double)filledBlocks.Length;
+//                var filledBlocks = Field.Skip(r - rowsComplete + 1).Take(rowsComplete).SelectMany(x => x).ToArray();
+//                var totalBlocks = (double)filledBlocks.Length;
 
-                var percentages = filledBlocks
-                    .Where(x => x.Color != null)
-                    .GroupBy(x => x.Color)
-                    .Select(g => (color: g.Key, percentage: g.Count() / totalBlocks))
-                    .OrderByDescending(d => d.percentage)
-                    .ToArray();
+//                var percentages = filledBlocks
+//                    .Where(x => x.Color != null)
+//                    .GroupBy(x => x.Color)
+//                    .Select(g => (color: g.Key, percentage: g.Count() / totalBlocks))
+//                    .OrderByDescending(d => d.percentage)
+//                    .ToArray();
 
-                var maxPercentage = percentages.Max(x => x.percentage);
+//                var maxPercentage = percentages.Max(x => x.percentage);
 
-                var colorsInBlocks = percentages.Select(x => x.color).ToArray();
+//                var colorsInBlocks = percentages.Select(x => x.color).ToArray();
 
-                foreach (var (color, percentage) in percentages)
-                {
-                    var damage = percentage switch
-                    {
-                        _ when percentage < maxPercentage / 4.0 => 3,
-                        _ when percentage < maxPercentage / 3.0 => 2,
-                        _ when percentage < maxPercentage / 2.0 => 1,
-                        _ => 0
-                    };
+//                foreach (var (color, percentage) in percentages)
+//                {
+//                    var damage = percentage switch
+//                    {
+//                        _ when percentage < maxPercentage / 4.0 => 3,
+//                        _ when percentage < maxPercentage / 3.0 => 2,
+//                        _ when percentage < maxPercentage / 2.0 => 1,
+//                        _ => 0
+//                    };
 
-                    Players.FirstOrDefault(x => x.Color == color)?.Health -= damage;
-                }
+//                    Players.FirstOrDefault(x => x.Color == color)?.Health -= damage;
+//                }
 
-                lock (Players)
-                {
-                    var playersNotInBlocks = Players.Except(Players.Where(p => colorsInBlocks.Contains(p.Color)));
-                    foreach (var player in playersNotInBlocks)
-                    {
-                        player.Health -= 4;
-                    }
-                }
+//                lock (Players)
+//                {
+//                    var playersNotInBlocks = Players.Except(Players.Where(p => colorsInBlocks.Contains(p.Color)));
+//                    foreach (var player in playersNotInBlocks)
+//                    {
+//                        player.Health -= 4;
+//                    }
+//                }
 
-                for (var nr = r; nr >= rowsComplete; nr--)
-                {
-                    Field[nr] = Field[nr - rowsComplete].ToList();
-                }
+//                for (var nr = r; nr >= rowsComplete; nr--)
+//                {
+//                    Field[nr] = Field[nr - rowsComplete].ToList();
+//                }
 
-                for (var nr = 0; nr <= rowsComplete; nr++)
-                {
-                    Field[nr] = Enumerable.Repeat(new Block(), Field[nr].Count).ToList();
-                }
-            }
-        }
+//                for (var nr = 0; nr <= rowsComplete; nr++)
+//                {
+//                    Field[nr] = Enumerable.Repeat(new Block(), Field[nr].Count).ToList();
+//                }
+//            }
+//        }
 
-        HandleBoardSize();
-    }
+//        HandleBoardSize();
+//    }
 
-    private void HandleBoardSize()
-    {
-        var players = Players;
-        var requiredTileSize = players.Count(p => p.Health > 0) switch
-        {
-            var x when x > 8 => 1,
-            var x when x > 4 => 2,
-            var x when x > 2 => 3,
-            _ => 4
-        };
+//    private void HandleBoardSize()
+//    {
+//        var players = Players;
+//        var requiredTileSize = players.Count(p => p.Health > 0) switch
+//        {
+//            var x when x > 8 => 1,
+//            var x when x > 4 => 2,
+//            var x when x > 2 => 3,
+//            _ => 4
+//        };
 
-        if (requiredTileSize == TileSize)
-        {
-            return;
-        }
+//        if (requiredTileSize == TileSize)
+//        {
+//            return;
+//        }
 
-        var scale = (double)requiredTileSize / TileSize;
-        var blocksInScale = Math.Ceiling((double)requiredTileSize / TileSize);
+//        var scale = (double)requiredTileSize / TileSize;
+//        var blocksInScale = Math.Ceiling((double)requiredTileSize / TileSize);
 
-        try
-        {
-            if (requiredTileSize < TileSize)
-            {
-                Field.SetColor(Helper.GetAllPositions(_size), null);
+//        try
+//        {
+//            if (requiredTileSize < TileSize)
+//            {
+//                Field.SetColor(Helper.GetAllPositions(_size), null);
 
-                return;
-            }
+//                return;
+//            }
 
-            var copiedField = Field.Select(r => r.ToList()).ToList();
+//            var copiedField = Field.Select(r => r.ToList()).ToList();
 
-            foreach (var block in copiedField.Blocks)
-            {
-                var blocks =
-                    GetPositions(block.Position)
-                    .Select(p => Field.ElementAtOrDefault(p.Y)?.ElementAtOrDefault(p.X))
-                    .OfType<Block>()
-                    .ToArray();
+//            foreach (var block in copiedField.Blocks)
+//            {
+//                var blocks =
+//                    GetPositions(block.Position)
+//                    .Select(p => Field.ElementAtOrDefault(p.Y)?.ElementAtOrDefault(p.X))
+//                    .OfType<Block>()
+//                    .ToArray();
 
-                if (blocks.Length > 0)
-                {
-                    var blockGroups = blocks
-                        .GroupBy(x => x.Color)
-                        .Select(g => (color: g.Key, count: g.Count()))
-                        .OrderByDescending(x => x.count)
-                        .ToArray();
+//                if (blocks.Length > 0)
+//                {
+//                    var blockGroups = blocks
+//                        .GroupBy(x => x.Color)
+//                        .Select(g => (color: g.Key, count: g.Count()))
+//                        .OrderByDescending(x => x.count)
+//                        .ToArray();
 
-                    if (blockGroups[0].color is not null)
-                    {
-                        Field.SetColor(block.Position, blockGroups[0].color);
-                        continue;
-                    }
-                    else if (blockGroups.Length > 1 && blockGroups[0].count < blockGroups[1].count * 3)
-                    {
-                        Field.SetColor(block.Position, blockGroups[1].color);
-                        continue;
-                    }
-                }
+//                    if (blockGroups[0].color is not null)
+//                    {
+//                        Field.SetColor(block.Position, blockGroups[0].color);
+//                        continue;
+//                    }
+//                    else if (blockGroups.Length > 1 && blockGroups[0].count < blockGroups[1].count * 3)
+//                    {
+//                        Field.SetColor(block.Position, blockGroups[1].color);
+//                        continue;
+//                    }
+//                }
 
-                Field.SetColor(block.Position, null);
-            }
-        }
-        finally
-        {
-            TileSize = requiredTileSize;
-        }
+//                Field.SetColor(block.Position, null);
+//            }
+//        }
+//        finally
+//        {
+//            TileSize = requiredTileSize;
+//        }
 
-        IEnumerable<Position> GetPositions(Position position)
-        {
-            /*
-             * scale = 1/2
-             * x = 10
-             * y = 15
-             * 
-             * x = 5 -> (10 + 11)
-             * y = 7 -> (7 + 8)
-             * 
-             * scale = 2/3
-             * x = 11
-             * y = 18
-             * 
-             * x = 7 -> (10 + 11)
-             * y = 12 -> (18)
-             */
+//        IEnumerable<Position> GetPositions(Position position)
+//        {
+//            /*
+//             * scale = 1/2
+//             * x = 10
+//             * y = 15
+//             * 
+//             * x = 5 -> (10 + 11)
+//             * y = 7 -> (7 + 8)
+//             * 
+//             * scale = 2/3
+//             * x = 11
+//             * y = 18
+//             * 
+//             * x = 7 -> (10 + 11)
+//             * y = 12 -> (18)
+//             */
 
-            var minX = position.X * scale;
-            var maxX = (int)Math.Ceiling(minX + blocksInScale);
+//            var minX = position.X * scale;
+//            var maxX = (int)Math.Ceiling(minX + blocksInScale);
 
-            var minY = position.Y * scale;
-            var maxY = (int)Math.Ceiling(minY + blocksInScale);
+//            var minY = position.Y * scale;
+//            var maxY = (int)Math.Ceiling(minY + blocksInScale);
 
-            for (var x = (int)minX; x < maxX; x++)
-            {
-                for (var y = (int)minY; y < maxY; y++)
-                {
-                    yield return new(x, y);
-                }
-            }
-        }
-    }
+//            for (var x = (int)minX; x < maxX; x++)
+//            {
+//                for (var y = (int)minY; y < maxY; y++)
+//                {
+//                    yield return new(x, y);
+//                }
+//            }
+//        }
+//    }
 
-    private static List<List<Block>> CreateField(int size) => [.. Enumerable.Range(0, size).Select(y => Enumerable.Range(0, size).Select(x => new Block(new(x, y))).ToList())];
-}
+//    private static List<List<Block>> CreateField(int size) => [.. Enumerable.Range(0, size).Select(y => Enumerable.Range(0, size).Select(x => new Block(new(x, y))).ToList())];
+//}

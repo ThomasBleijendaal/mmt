@@ -2,7 +2,7 @@
 using Mmt.Host.Game.Events;
 using Mmt.Host.Models;
 
-namespace Mmt.Host.Game;
+namespace Mmt.Host.Services;
 
 public class GameService : BackgroundService
 {

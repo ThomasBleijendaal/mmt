@@ -15,5 +15,6 @@ public partial class GameEntity : IStartsWith<StartGame, GameEntity>
         Field = CreateField(command.Size)
     };
 
-    private static List<List<Block>> CreateField(int size) => [.. Enumerable.Range(0, size).Select(y => Enumerable.Range(0, size).Select(x => new Block(new(x, y))).ToList())];
+    private static List<List<Block>> CreateField(int size)
+        => [.. Enumerable.Range(0, size).Select(y => Enumerable.Range(0, size).Select(x => new Block(new(x, y))).ToList())];
 }

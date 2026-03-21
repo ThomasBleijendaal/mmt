@@ -13,8 +13,6 @@ public static class ServiceCollectionExtensions
             var channel = Channel.CreateUnbounded<IEvent>(new() { SingleReader = true });
 
             services.AddSingleton(channel.Writer);
-
-            // TODO: make this only for the processor
             services.AddSingleton(channel.Reader);
 
             services.AddSingleton<ISession, EventCoreSession>();
@@ -38,15 +36,25 @@ public static class ServiceCollectionExtensions
             {
                 if (@interface.GetGenericTypeDefinition() == typeof(IStartsWith<,>))
                 {
-                    services.AddSingleton(new StartsWithEventRegistration(
-                        @interface.GenericTypeArguments[0],
-                        @interface.GenericTypeArguments[1]));
+                    var proxyType = typeof(StartsWithProxy<,>).MakeGenericType(@interface.GenericTypeArguments);
+                    var genericProxyType = typeof(IStartsWithProxy<>).MakeGenericType(@interface.GenericTypeArguments[1]);
+
+                    var createByEventKey = @interface.GenericTypeArguments[0];
+                    var key = @interface.GenericTypeArguments.Deconstruct();
+
+                    services.AddKeyedSingleton(typeof(IStartsWithProxy), key, proxyType);
+                    services.AddKeyedSingleton(typeof(IStartsWithProxy), createByEventKey, proxyType);
+                    services.AddKeyedSingleton(genericProxyType, key, proxyType);
                 }
                 else if (@interface.GetGenericTypeDefinition() == typeof(IHandles<,>))
                 {
-                    services.AddSingleton(new HandlesEventRegistration(
-                        @interface.GenericTypeArguments[0],
-                        @interface.GenericTypeArguments[1]));
+                    var proxyType = typeof(HandlesProxy<,>).MakeGenericType(@interface.GenericTypeArguments);
+                    var genericProxyType = typeof(IHandlesProxy<>).MakeGenericType(@interface.GenericTypeArguments[1]);
+
+                    var key = @interface.GenericTypeArguments.Deconstruct();
+
+                    services.AddKeyedSingleton(typeof(IHandlesProxy), key, proxyType);
+                    services.AddKeyedSingleton(genericProxyType, key, proxyType);
                 }
             }
 
@@ -60,17 +68,19 @@ public static class ServiceCollectionExtensions
             {
                 if (@interface.GetGenericTypeDefinition() == typeof(IEventListener<,>))
                 {
-                    // TODO: find a reusable IProxy<IEventListener<>> for this?
-
                     var interfaceType = typeof(IEventListener<,>).MakeGenericType(@interface.GenericTypeArguments);
 
-                    services.Add(new ServiceDescriptor(interfaceType, typeof(TListener), serviceLifetime));
+                    services.Add(new ServiceDescriptor(typeof(TListener), serviceLifetime));
 
                     var proxyType = typeof(EventListenerProxy<,>).MakeGenericType(@interface.GenericTypeArguments);
 
                     var key = @interface.GenericTypeArguments.Deconstruct();
 
-                    services.Add(new ServiceDescriptor(typeof(IEventListenerProxy), key, proxyType, serviceLifetime));
+                    // TODO: this crashes
+                    services.Add(new ServiceDescriptor(typeof(IEventListenerProxy), key, (sp, _) =>
+                    {
+                        return ActivatorUtilities.CreateInstance(sp, proxyType, sp.GetRequiredService<TListener>());
+                    }, serviceLifetime));
                 }
             }
 

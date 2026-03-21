@@ -5,20 +5,17 @@ namespace EventCore;
 internal class EventStoreOperations : IEventStoreOperations
 {
     private readonly IEventStore _eventStore;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ChannelWriter<IEvent> _eventChannel;
-    private readonly StartsWithEventRegistration[] _startsWithEventRegistrations;
-    private readonly HandlesEventRegistration[] _handlesEventRegistrations;
 
     public EventStoreOperations(
         IEventStore eventStore,
-        IEnumerable<StartsWithEventRegistration> startsWithEventRegistrations,
-        IEnumerable<HandlesEventRegistration> handlesEventRegistrations,
+        IServiceProvider serviceProvider,
         ChannelWriter<IEvent> eventChannel)
     {
         _eventStore = eventStore;
+        _serviceProvider = serviceProvider;
         _eventChannel = eventChannel;
-        _startsWithEventRegistrations = startsWithEventRegistrations.ToArray();
-        _handlesEventRegistrations = handlesEventRegistrations.ToArray();
     }
 
     public async Task StartStreamAsync<TEvent>(TEvent @event) where TEvent : ICreateEvent
@@ -41,13 +38,14 @@ internal class EventStoreOperations : IEventStoreOperations
             return default;
         }
 
-        var createProxy = _startsWithEventRegistrations.GetProxy<TEntity>();
+        var createEvent = events.OfType<ICreateEvent>().First();
+        var createProxy = _serviceProvider.GetProxy<TEntity>(createEvent);
 
-        var entity = createProxy.Create(events.OfType<ICreateEvent>().First());
+        var entity = createProxy.Create(createEvent);
 
         foreach (var @event in events[1..])
         {
-            var handlesProxy = _handlesEventRegistrations.GetProxy<TEntity>(@event);
+            var handlesProxy = _serviceProvider.GetProxy<TEntity>(@event);
             entity = handlesProxy.Handle(@event, entity);
         }
 
