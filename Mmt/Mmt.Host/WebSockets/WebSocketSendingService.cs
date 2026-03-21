@@ -2,6 +2,7 @@
 using System.Net.WebSockets;
 using System.Text.Json;
 using Mmt.Host.Game;
+using Mmt.Host.Networking;
 
 namespace Mmt.Host.WebSockets;
 
@@ -37,7 +38,7 @@ internal class WebSocketSendingService : BackgroundService
 
     private async Task SendWebSocketAsync(GameEntity gameEntity, Guid playerId, WebSocket ws, CancellationToken stoppingToken)
     {
-        var state = gameEntity.GetNetworkState(playerId);
+        var state = NetworkGameState.Map(gameEntity, playerId);
 
         var array = ArrayPool<byte>.Shared.Rent(256 * 1024);
 

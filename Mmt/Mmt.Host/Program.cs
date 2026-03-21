@@ -6,18 +6,17 @@ using Mmt.Host.Game;
 using Mmt.Host.Game.EventHandlers;
 using Mmt.Host.Game.Events;
 using Mmt.Host.Models;
+using Mmt.Host.Services;
 using Mmt.Host.WebSockets;
+
+var gameSize = 60;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.UseUrls("http://*:8080");
 builder.WebHost.UseStaticWebAssets();
 
-// Add services to the container.
-
 var channel = Channel.CreateUnbounded<PlayerUpdate>();
-
-//var gameStateRepo = new GameStateRepository(60);
 
 var jsonSerializerOptions = new JsonSerializerOptions
 {
@@ -29,11 +28,12 @@ builder.Services.AddEventCore();
 builder.Services.AddInMemoryStorage();
 builder.Services.AddEntity<GameEntity>();
 builder.Services.AddEventListener<BoardSizeHandler>();
-builder.Services.AddEventListener<PlayerReadyHandler>();
-builder.Services.AddEventListener<PlaceBlockDamageHandler>();
+builder.Services.AddEventListener<ClearedRowsHandler>();
 builder.Services.AddEventListener<ClearRowsHandler>();
+builder.Services.AddEventListener<GameFinishedHandler>();
+builder.Services.AddEventListener<PlaceBlockDamageHandler>();
+builder.Services.AddEventListener<PlayerReadyHandler>();
 
-//builder.Services.AddSingleton(gameStateRepo);
 builder.Services.AddSingleton(jsonSerializerOptions);
 builder.Services.AddSingleton(channel);
 builder.Services.AddHostedService<GameService>();
@@ -44,8 +44,6 @@ builder.Services.AddSingleton<WebSocketHandler>();
 builder.Services.AddCors();
 
 var app = builder.Build();
-
-// Configure the HTTP request pipeline.
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -76,8 +74,7 @@ app.MapPost("/join",
 
     if (game == null)
     {
-        // TODO: configure that 60
-        await session.Events.StartStreamAsync(new StartGame(gameId, 60));
+        await session.Events.StartStreamAsync(new StartGame(gameId, gameSize));
     }
 
     var playerId = Guid.NewGuid();

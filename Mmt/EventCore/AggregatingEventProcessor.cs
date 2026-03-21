@@ -8,22 +8,16 @@ internal class AggregatingEventProcessor : BackgroundService
     private readonly ChannelReader<IEvent> _eventChannel;
     private readonly EntityCache _entityCache;
     private readonly IServiceProvider _serviceProvider;
-    private readonly StartsWithEventRegistration[] _startsWithEventRegistrations;
-    private readonly HandlesEventRegistration[] _handlesEventRegistrations;
 
 
     public AggregatingEventProcessor(
         ChannelReader<IEvent> eventChannel,
         EntityCache entityCache,
-        IServiceProvider serviceProvider,
-        IEnumerable<StartsWithEventRegistration> startsWithEventRegistrations,
-        IEnumerable<HandlesEventRegistration> handlesEventRegistrations)
+        IServiceProvider serviceProvider)
     {
         _eventChannel = eventChannel;
         _entityCache = entityCache;
         _serviceProvider = serviceProvider;
-        _startsWithEventRegistrations = startsWithEventRegistrations.ToArray();
-        _handlesEventRegistrations = handlesEventRegistrations.ToArray();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -32,7 +26,7 @@ internal class AggregatingEventProcessor : BackgroundService
         {
             if (@event is ICreateEvent createEvent)
             {
-                var entities = _startsWithEventRegistrations.CreateEntities(createEvent);
+                var entities = _serviceProvider.CreateEntities(createEvent);
                 foreach (var entity in entities)
                 {
                     _entityCache.SetEntity(entity);
@@ -41,7 +35,7 @@ internal class AggregatingEventProcessor : BackgroundService
             }
             else if (_entityCache.GetEntity(@event.Id) is IEntity entity)
             {
-                _entityCache.SetEntity(_handlesEventRegistrations.Handle(@event, entity));
+                _entityCache.SetEntity(_serviceProvider.Handle(@event, entity));
                 await _serviceProvider.BroadcastEventAsync(@event, entity);
             }
 
