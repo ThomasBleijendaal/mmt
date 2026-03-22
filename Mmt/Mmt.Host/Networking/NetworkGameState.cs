@@ -5,9 +5,6 @@ namespace Mmt.Host.Networking;
 
 public record NetworkGameState
 {
-    // TODO: move to join response
-    public required Guid NextGameId { get; init; }
-
     public required NetworkBlock[][] BlockState { get; init; }
 
     public required NetworkPlayer[] Players { get; init; }
@@ -68,7 +65,6 @@ public record NetworkGameState
 
         return new NetworkGameState
         {
-            NextGameId = entity.NextGameId,
             BlockState = [.. result.Select(r => r.Select(MapBlock).ToArray())],
             RowsCleared = entity.RowsCleared,
             Players = [.. players.Select(p => new NetworkPlayer

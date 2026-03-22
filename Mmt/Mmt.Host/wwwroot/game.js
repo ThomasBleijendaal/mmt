@@ -39,7 +39,7 @@ let nextGameId;
 let playerId = null;
 let playerIndex = null;
 let playerName = "Test";
-const playerColor = randomColor();
+let playerColor = "#fff";
 let currentHealth = 40;
 let gameStarted = false;
 let isDead = false;
@@ -65,7 +65,7 @@ async function initGame() {
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name: playerName, color: playerColor })
+        body: JSON.stringify({ name: playerName })
     });
 
     if (joinResponse.status == 400) {
@@ -75,7 +75,9 @@ async function initGame() {
 
     let result = await joinResponse.json();
     gameId = result.gameId;
+    nextGameId = result.nextGameId;
     playerId = result.playerId;
+    playerColor = result.playerColor;
 
     window.location.hash = gameId;
     shareUrl.innerHTML = window.location.href;
@@ -89,7 +91,6 @@ async function initGame() {
         cleared = data.rowsCleared;
         currentTileSize = data.tileSize;
         gameStarted = !gameFinished && (data.status == "Running" || data.status == "Finished");
-        nextGameId = data.nextGameId;
 
         playerIndex = players?.filter(x => !x.isDead).findIndex(x => x.id == playerId);
         isNr1 = false;

@@ -68,19 +68,17 @@ public static class ServiceCollectionExtensions
             {
                 if (@interface.GetGenericTypeDefinition() == typeof(IEventListener<,>))
                 {
-                    var interfaceType = typeof(IEventListener<,>).MakeGenericType(@interface.GenericTypeArguments);
-
-                    services.Add(new ServiceDescriptor(typeof(TListener), serviceLifetime));
+                    services.Add(new ServiceDescriptor(typeof(TListener), typeof(TListener), serviceLifetime));
 
                     var proxyType = typeof(EventListenerProxy<,>).MakeGenericType(@interface.GenericTypeArguments);
 
                     var key = @interface.GenericTypeArguments.Deconstruct();
 
-                    // TODO: this crashes
-                    services.Add(new ServiceDescriptor(typeof(IEventListenerProxy), key, (sp, _) =>
-                    {
-                        return ActivatorUtilities.CreateInstance(sp, proxyType, sp.GetRequiredService<TListener>());
-                    }, serviceLifetime));
+                    services.Add(new ServiceDescriptor(
+                        typeof(IEventListenerProxy),
+                        key,
+                        (sp, _) => ActivatorUtilities.CreateInstance(sp, proxyType, sp.GetRequiredService<TListener>()),
+                        serviceLifetime));
                 }
             }
 

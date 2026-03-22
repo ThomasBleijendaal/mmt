@@ -62,9 +62,7 @@ app.MapPost("/join",
 
     if (game?.Status == GameStatus.Finished)
     {
-        // TODO: add finished game state + handling
-        return Results.InternalServerError();
-        // gameState.Reset();
+        await session.Events.AppendAsync(new ResetGame(gameId));
     }
 
     if (game?.Status == GameStatus.Running)
@@ -81,16 +79,26 @@ app.MapPost("/join",
 
     await session.Events.AppendAsync(new JoinGame(gameId, playerId, request.Name));
 
-    // TODO: find solution to return color + next game id here
+    game = await session.Events.AggregateStreamAsync<GameEntity>(gameId);
+    if (game == null)
+    {
+        return Results.InternalServerError("Failed to start game");
+    }
 
     return Results.Ok(new PlayerJoinResponse
     {
         GameId = gameId,
-        PlayerId = playerId
+        NextGameId = game.NextGameId,
+        PlayerId = playerId,
+        PlayerColor = game.Players.Single(x => x.Id == playerId).Color
     });
 });
 
-app.MapGet("/ws/{gameId:guid}/{playerId:guid}", async (HttpContext context, WebSocketHandler handler, [FromRoute] Guid gameId, [FromRoute] Guid playerId) =>
+app.MapGet("/ws/{gameId:guid}/{playerId:guid}",
+    async (HttpContext context,
+    WebSocketHandler handler,
+    [FromRoute] Guid gameId,
+    [FromRoute] Guid playerId) =>
 {
     if (!context.WebSockets.IsWebSocketRequest)
     {
