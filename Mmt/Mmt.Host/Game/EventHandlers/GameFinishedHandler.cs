@@ -15,15 +15,8 @@ public class GameFinishedHandler :
         _eventChannel = eventChannel;
     }
 
-    public async Task HandleAsync(UpdatePlayerHealth @event, GameEntity entity)
-    {
-        await CheckDeadPlayersAsync(entity);
-    }
-
-    public async Task HandleAsync(DropPlayer @event, GameEntity entity)
-    {
-        await CheckDeadPlayersAsync(entity);
-    }
+    public Task HandleAsync(UpdatePlayerHealth @event, GameEntity entity) => CheckDeadPlayersAsync(entity);
+    public Task HandleAsync(DropPlayer @event, GameEntity entity) => CheckDeadPlayersAsync(entity);
 
     private async Task CheckDeadPlayersAsync(GameEntity entity)
     {

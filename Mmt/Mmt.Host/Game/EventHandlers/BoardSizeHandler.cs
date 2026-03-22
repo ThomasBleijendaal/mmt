@@ -4,7 +4,10 @@ using Mmt.Host.Game.Events;
 
 namespace Mmt.Host.Game.EventHandlers;
 
-public class BoardSizeHandler : IEventListener<JoinGame, GameEntity>
+public class BoardSizeHandler :
+    IEventListener<JoinGame, GameEntity>,
+    IEventListener<DropPlayer, GameEntity>,
+    IEventListener<UpdatePlayerHealth, GameEntity>
 {
     private readonly ChannelWriter<IEvent> _eventChannel;
 
@@ -13,7 +16,11 @@ public class BoardSizeHandler : IEventListener<JoinGame, GameEntity>
         _eventChannel = eventChannel;
     }
 
-    public async Task HandleAsync(JoinGame @event, GameEntity entity)
+    public Task HandleAsync(JoinGame @event, GameEntity entity) => UpdateBoardSizeAsync(entity);
+    public Task HandleAsync(DropPlayer @event, GameEntity entity) => UpdateBoardSizeAsync(entity);
+    public Task HandleAsync(UpdatePlayerHealth @event, GameEntity entity) => UpdateBoardSizeAsync(entity);
+
+    private async Task UpdateBoardSizeAsync(GameEntity entity)
     {
         var requiredTileSize = entity.Players.Count(p => p.Health > 0) switch
         {
@@ -25,7 +32,7 @@ public class BoardSizeHandler : IEventListener<JoinGame, GameEntity>
 
         if (requiredTileSize != entity.TileSize)
         {
-            await _eventChannel.WriteAsync(new ResizeBoard(@event.Id, requiredTileSize));
+            await _eventChannel.WriteAsync(new ResizeBoard(entity.Id, requiredTileSize));
         }
     }
 }
