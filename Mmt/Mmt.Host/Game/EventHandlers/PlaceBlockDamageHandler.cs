@@ -1,23 +1,23 @@
-﻿using System.Threading.Channels;
-using EventCore;
+﻿using EventCore;
 using Mmt.Host.Game.Events;
+using ISession = EventCore.ISession;
 
 namespace Mmt.Host.Game.EventHandlers;
 
 public class PlaceBlockDamageHandler : IEventListener<PlaceBlock, GameEntity>
 {
-    private readonly ChannelWriter<IEvent> _eventChannel;
+    private readonly ISession _session;
 
-    public PlaceBlockDamageHandler(ChannelWriter<IEvent> eventChannel)
+    public PlaceBlockDamageHandler(ISession session)
     {
-        _eventChannel = eventChannel;
+        _session = session;
     }
 
     public async Task HandleAsync(PlaceBlock @event, GameEntity entity)
     {
         if (@event.Positions.All(x => x.Y <= 3))
         {
-            await _eventChannel.WriteAsync(new UpdatePlayerHealth(@event.Id, @event.PlayerId, -3));
+            await _session.Events.AppendAsync(new UpdatePlayerHealth(@event.Id, @event.PlayerId, -3));
         }
     }
 }

@@ -1,16 +1,16 @@
-﻿using System.Threading.Channels;
-using EventCore;
+﻿using EventCore;
 using Mmt.Host.Game.Events;
+using ISession = EventCore.ISession;
 
 namespace Mmt.Host.Game.EventHandlers;
 
 public class PlayerReadyHandler : IEventListener<ReadyPlayer, GameEntity>
 {
-    private readonly ChannelWriter<IEvent> _eventChannel;
+    private readonly ISession _session;
 
-    public PlayerReadyHandler(ChannelWriter<IEvent> eventChannel)
+    public PlayerReadyHandler(ISession session)
     {
-        _eventChannel = eventChannel;
+        _session = session;
     }
 
     public async Task HandleAsync(ReadyPlayer @event, GameEntity entity)
@@ -22,7 +22,7 @@ public class PlayerReadyHandler : IEventListener<ReadyPlayer, GameEntity>
 
         if (entity.Players.Count > 1 && entity.Players.All(x => x.Ready))
         {
-            await _eventChannel.WriteAsync(new UpdateGameStatus(@event.Id, GameStatus.Running));
+            await _session.Events.AppendAsync(new UpdateGameStatus(@event.Id, GameStatus.Running));
         }
     }
 }

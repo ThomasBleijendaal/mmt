@@ -9,8 +9,12 @@ public partial class GameEntity : IHandles<RemoveRows, GameEntity>
     public static GameEntity Handle(RemoveRows command, GameEntity current)
     {
         var delta = command.Rows.Length;
+        if (delta == 0)
+        {
+            return current;
+        }
 
-        foreach (var nr in command.Rows)
+        for (var nr = command.Rows.Max(); nr > delta; nr--)
         {
             current.Field[nr] = current.Field[nr - delta].ToList();
         }

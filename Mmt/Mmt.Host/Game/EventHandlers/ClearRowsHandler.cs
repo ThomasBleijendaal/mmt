@@ -1,17 +1,17 @@
 ﻿using System.Collections.Immutable;
-using System.Threading.Channels;
 using EventCore;
 using Mmt.Host.Game.Events;
+using ISession = EventCore.ISession;
 
 namespace Mmt.Host.Game.EventHandlers;
 
 public class ClearRowsHandler : IEventListener<PlaceBlock, GameEntity>
 {
-    private readonly ChannelWriter<IEvent> _eventChannel;
+    private readonly ISession _session;
 
-    public ClearRowsHandler(ChannelWriter<IEvent> eventChannel)
+    public ClearRowsHandler(ISession session)
     {
-        _eventChannel = eventChannel;
+        _session = session;
     }
 
     public async Task HandleAsync(PlaceBlock @event, GameEntity entity)
@@ -27,7 +27,7 @@ public class ClearRowsHandler : IEventListener<PlaceBlock, GameEntity>
                     rowsComplete++;
                 }
 
-                await _eventChannel.WriteAsync(new AddClearedRowsCount(@event.Id, rowsComplete));
+                await _session.Events.AppendAsync(new AddClearedRowsCount(@event.Id, rowsComplete));
 
                 var filledBlocks = entity.Field.Skip(r - rowsComplete + 1).Take(rowsComplete).SelectMany(x => x).ToArray();
                 var totalBlocks = (double)filledBlocks.Length;
@@ -55,16 +55,16 @@ public class ClearRowsHandler : IEventListener<PlaceBlock, GameEntity>
 
                     var player = entity.Players.Single(x => x.Color == color);
 
-                    await _eventChannel.WriteAsync(new UpdatePlayerHealth(@event.Id, player.Id, damage));
+                    await _session.Events.AppendAsync(new UpdatePlayerHealth(@event.Id, player.Id, damage));
                 }
 
                 var playersNotInBlocks = entity.Players.Except(entity.Players.Where(p => colorsInBlocks.Contains(p.Color)));
                 foreach (var player in playersNotInBlocks)
                 {
-                    await _eventChannel.WriteAsync(new UpdatePlayerHealth(@event.Id, player.Id, -4));
+                    await _session.Events.AppendAsync(new UpdatePlayerHealth(@event.Id, player.Id, -4));
                 }
 
-                await _eventChannel.WriteAsync(new RemoveRows(@event.Id, Enumerable.Range(r, rowsComplete).ToArray()));
+                await _session.Events.AppendAsync(new RemoveRows(@event.Id, Enumerable.Range(r, rowsComplete).ToArray()));
             }
         }
     }

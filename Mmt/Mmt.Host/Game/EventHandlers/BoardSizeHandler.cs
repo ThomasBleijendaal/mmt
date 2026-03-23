@@ -1,6 +1,6 @@
-﻿using System.Threading.Channels;
-using EventCore;
+﻿using EventCore;
 using Mmt.Host.Game.Events;
+using ISession = EventCore.ISession;
 
 namespace Mmt.Host.Game.EventHandlers;
 
@@ -9,11 +9,11 @@ public class BoardSizeHandler :
     IEventListener<DropPlayer, GameEntity>,
     IEventListener<UpdatePlayerHealth, GameEntity>
 {
-    private readonly ChannelWriter<IEvent> _eventChannel;
+    private readonly ISession _session;
 
-    public BoardSizeHandler(ChannelWriter<IEvent> eventChannel)
+    public BoardSizeHandler(ISession session)
     {
-        _eventChannel = eventChannel;
+        _session = session;
     }
 
     public Task HandleAsync(JoinGame @event, GameEntity entity) => UpdateBoardSizeAsync(entity);
@@ -32,7 +32,7 @@ public class BoardSizeHandler :
 
         if (requiredTileSize != entity.TileSize)
         {
-            await _eventChannel.WriteAsync(new ResizeBoard(entity.Id, requiredTileSize));
+            await _session.Events.AppendAsync(new ResizeBoard(entity.Id, requiredTileSize));
         }
     }
 }

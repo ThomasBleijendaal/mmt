@@ -1,16 +1,16 @@
-﻿using System.Threading.Channels;
-using EventCore;
+﻿using EventCore;
 using Mmt.Host.Game.Events;
+using ISession = EventCore.ISession;
 
 namespace Mmt.Host.Game.EventHandlers;
 
 public class ClearedRowsHandler : IEventListener<AddClearedRowsCount, GameEntity>
 {
-    private readonly ChannelWriter<IEvent> _eventChannel;
+    private readonly ISession _session;
 
-    public ClearedRowsHandler(ChannelWriter<IEvent> eventChannel)
+    public ClearedRowsHandler(ISession session)
     {
-        _eventChannel = eventChannel;
+        _session = session;
     }
 
     public async Task HandleAsync(AddClearedRowsCount @event, GameEntity entity)
@@ -19,7 +19,7 @@ public class ClearedRowsHandler : IEventListener<AddClearedRowsCount, GameEntity
         {
             foreach (var player in entity.Players)
             {
-                await _eventChannel.WriteAsync(new UpdatePlayerHealth(@event.Id, player.Id, 20));
+                await _session.Events.AppendAsync(new UpdatePlayerHealth(@event.Id, player.Id, 20));
             }
         }
     }

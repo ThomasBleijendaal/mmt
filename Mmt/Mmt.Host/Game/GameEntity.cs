@@ -4,12 +4,6 @@ using Mmt.Host.Models;
 
 namespace Mmt.Host.Game;
 
-// ISSUES
-// - end game doesn't trigger
-// - game continues when only 1 player 
-// - row removal does not work
-
-
 public partial class GameEntity : IEntity
 {
     public Guid Id { get; private set; }

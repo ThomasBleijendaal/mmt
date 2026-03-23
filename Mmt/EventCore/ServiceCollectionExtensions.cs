@@ -9,14 +9,12 @@ public static class ServiceCollectionExtensions
     {
         public IServiceCollection AddEventCore()
         {
-            services.AddHostedService<AggregatingEventProcessor>();
             var channel = Channel.CreateUnbounded<IEvent>(new() { SingleReader = true });
 
-            services.AddSingleton(channel.Writer);
-            services.AddSingleton(channel.Reader);
+            services.AddHostedService(sp => ActivatorUtilities.CreateInstance<AggregatingEventProcessor>(sp, channel.Reader));
 
             services.AddSingleton<ISession, EventCoreSession>();
-            services.AddSingleton<EventStoreOperations>();
+            services.AddSingleton(sp => ActivatorUtilities.CreateInstance<EventStoreOperations>(sp, channel.Writer));
             services.AddSingleton<EntityCache>();
 
             return services;
