@@ -1,6 +1,6 @@
-﻿using System.Threading.Channels;
-using EventCore;
+﻿using EventCore;
 using Mmt.Host.Game.Events;
+using ISession = EventCore.ISession;
 
 namespace Mmt.Host.Game.EventHandlers;
 
@@ -8,11 +8,11 @@ public class GameFinishedHandler :
     IEventListener<DropPlayer, GameEntity>,
     IEventListener<UpdatePlayerHealth, GameEntity>
 {
-    private readonly ChannelWriter<IEvent> _eventChannel;
+    private readonly ISession _session;
 
-    public GameFinishedHandler(ChannelWriter<IEvent> eventChannel)
+    public GameFinishedHandler(ISession session)
     {
-        _eventChannel = eventChannel;
+        _session = session;
     }
 
     public Task HandleAsync(UpdatePlayerHealth @event, GameEntity entity) => CheckDeadPlayersAsync(entity);
@@ -23,9 +23,9 @@ public class GameFinishedHandler :
         var playerCount = entity.Players.Count;
         var deadCount = entity.Players.Count(p => p.IsDead);
 
-        if (playerCount > 1 && deadCount == playerCount - 1)
+        if (deadCount >= playerCount - 1)
         {
-            await _eventChannel.WriteAsync(new UpdateGameStatus(entity.Id, GameStatus.Finished));
+            await _session.Events.AppendAsync(new UpdateGameStatus(entity.Id, GameStatus.Finished));
         }
     }
 }

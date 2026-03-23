@@ -82,7 +82,7 @@ app.MapPost("/join",
     game = await session.Events.AggregateStreamAsync<GameEntity>(gameId);
     if (game == null)
     {
-        return Results.InternalServerError("Failed to start game");
+        return Results.BadRequest("Failed to start game");
     }
 
     return Results.Ok(new PlayerJoinResponse
