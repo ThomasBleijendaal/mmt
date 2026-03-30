@@ -1,4 +1,6 @@
-﻿using Mmt.Host.Models;
+﻿using System.Threading.Channels;
+using Mmt.Host.Game;
+using Mmt.Host.Models;
 
 namespace Mmt.Host;
 
@@ -55,6 +57,25 @@ public static class Extensions
                     yield return block;
                 }
             }
+        }
+    }
+
+    extension(GameEntity entity)
+    {
+        public Guid[] PlayerIdsExcept(Guid playerId) => entity.Players.Select(x => x.Id).Except([playerId]).ToArray();
+    }
+
+    extension<T>(ChannelReader<T> channel)
+    {
+        public T[] ReadAvailable()
+        {
+            var result = new List<T>(20);
+            while (channel.TryRead(out var item))
+            {
+                result.Add(item);
+            }
+
+            return result.ToArray();
         }
     }
 }

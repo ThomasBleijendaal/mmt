@@ -9,6 +9,7 @@ public partial class GameEntity : IStartsWith<StartGame, GameEntity>
     public static GameEntity Create(StartGame command) => new()
     {
         Id = command.Id,
+        NextGameId = command.NextGameId,
         Size = command.Size,
         TileSize = 4,
         Status = GameStatus.PreGame,

@@ -1,4 +1,6 @@
-﻿using EventCore;
+﻿using System.Threading.Channels;
+using EventCore;
+using Mmt.Host.Game.AudioEvents;
 using Mmt.Host.Game.Events;
 using ISession = EventCore.ISession;
 
@@ -10,10 +12,14 @@ public class BoardSizeHandler :
     IEventListener<UpdatePlayerHealth, GameEntity>
 {
     private readonly ISession _session;
+    private readonly ChannelWriter<AudioEvent> _audioChannel;
 
-    public BoardSizeHandler(ISession session)
+    public BoardSizeHandler(
+        ISession session,
+        ChannelWriter<AudioEvent> audioChannel)
     {
         _session = session;
+        _audioChannel = audioChannel;
     }
 
     public Task HandleAsync(JoinGame @event, GameEntity entity) => UpdateBoardSizeAsync(entity);
@@ -33,6 +39,12 @@ public class BoardSizeHandler :
         if (requiredTileSize != entity.TileSize)
         {
             await _session.Events.AppendAsync(new ResizeBoard(entity.Id, requiredTileSize));
+
+            _audioChannel.TryWrite(new AudioEvent
+            {
+                PlayerIds = null,
+                Type = AudioType.LineRemoved
+            });
         }
     }
 }

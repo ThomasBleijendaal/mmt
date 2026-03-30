@@ -1,4 +1,6 @@
 ﻿using Mmt.Host.Game;
+using Mmt.Host.Game.AudioEvents;
+using Mmt.Host.Game.VisualEvents;
 using Mmt.Host.Models;
 
 namespace Mmt.Host.Networking;
@@ -6,6 +8,10 @@ namespace Mmt.Host.Networking;
 public record NetworkGameState
 {
     public required NetworkBlock[][] BlockState { get; init; }
+
+    public required string[]? AudioToPlay { get; init; }
+
+    public required NetworkAnimation[]? AnimationsToStart { get; init; }
 
     public required NetworkPlayer[] Players { get; init; }
 
@@ -20,6 +26,12 @@ public record NetworkGameState
         public static readonly NetworkBlock NullBlock = new() { Color = null };
 
         public required string? Color { get; init; }
+    }
+
+    public record NetworkAnimation
+    {
+        public required string Type { get; init; }
+        public Position[]? Positions { get; init; }
     }
 
     public record NetworkPlayer
@@ -39,7 +51,7 @@ public record NetworkGameState
         public required Position? CenterPosition { get; init; }
     }
 
-    public static NetworkGameState Map(GameEntity entity, Guid playerId)
+    public static NetworkGameState Map(GameEntity entity, Guid playerId, AudioEvent[] audioEvents, VisualEvent[] visualEvents)
     {
         var players = entity.Players;
 
@@ -63,9 +75,20 @@ public record NetworkGameState
             }
         }
 
+        if (audioEvents.Length > 0)
+        {
+            Console.WriteLine(string.Join(",", audioEvents.Select(x => $"{x.Type} - {string.Join(",", x.PlayerIds ?? [])}")));
+        }
+
         return new NetworkGameState
         {
             BlockState = [.. result.Select(r => r.Select(MapBlock).ToArray())],
+            AudioToPlay = [.. audioEvents.Where(x => x.PlayerIds == null || x.PlayerIds.Contains(playerId)).Select(x => x.Type.ToString())],
+            AnimationsToStart = [.. visualEvents.Where(x =>  x.PlayerIds == null || x.PlayerIds.Contains(playerId)).Select(x => x switch
+            {
+                BlockRemoved br => new NetworkAnimation { Type = x.GetType().Name, Positions = br.Positions.ToArray() },
+                _ => new NetworkAnimation { Type = x.GetType().Name }
+            })],
             RowsCleared = entity.RowsCleared,
             Players = [.. players.Select(p => new NetworkPlayer
             {

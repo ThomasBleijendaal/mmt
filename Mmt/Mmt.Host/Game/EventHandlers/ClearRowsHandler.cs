@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using EventCore;
 using Mmt.Host.Game.Events;
+using Mmt.Host.Models;
 using ISession = EventCore.ISession;
 
 namespace Mmt.Host.Game.EventHandlers;
@@ -26,8 +27,6 @@ public class ClearRowsHandler : IEventListener<PlaceBlock, GameEntity>
                 {
                     rowsComplete++;
                 }
-
-                await _session.Events.AppendAsync(new AddClearedRowsCount(@event.Id, rowsComplete));
 
                 var filledBlocks = entity.Field.Skip(r - rowsComplete + 1).Take(rowsComplete).SelectMany(x => x).ToArray();
                 var totalBlocks = (double)filledBlocks.Length;
@@ -64,7 +63,8 @@ public class ClearRowsHandler : IEventListener<PlaceBlock, GameEntity>
                     await _session.Events.AppendAsync(new UpdatePlayerHealth(@event.Id, player.Id, -4));
                 }
 
-                await _session.Events.AppendAsync(new RemoveRows(@event.Id, Enumerable.Range(r, rowsComplete).ToArray()));
+                var blocksInRows = Enumerable.Range(r, rowsComplete).SelectMany(y => Enumerable.Range(0, width).Select(x => new Position(x, y))).ToArray();
+                await _session.Events.AppendAsync(new RemoveBlocks(@event.Id, blocksInRows));
             }
         }
     }
