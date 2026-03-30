@@ -6,12 +6,12 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /app
 COPY . ./app
-RUN dotnet restore "./app/Mmt.Host.csproj"
-RUN dotnet build "./app/Mmt.Host.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet restore "./app/Mmt/Mmt.Host/Mmt.Host.csproj"
+RUN dotnet build "./app/Mmt/Mmt.Host/Mmt.Host.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./app/Mmt.Host.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./app/Mmt/Mmt.Host/Mmt.Host.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app

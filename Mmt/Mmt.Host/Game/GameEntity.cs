@@ -14,9 +14,11 @@ public partial class GameEntity : IEntity
 
     public int RowsCleared { get; private set; }
 
+    public int InvalidBlocksPlaced { get; private set; }
+
     public GameStatus Status { get; private set; }
 
-    public Guid NextGameId { get; private set; } = Guid.NewGuid();
+    public Guid NextGameId { get; private set; }
 
     public ImmutableList<PlayerState> Players { get; private set; } = [];
 

@@ -14,6 +14,10 @@ public partial class GameEntity : IHandles<PlaceBlock, GameEntity>
         {
             current.Field.SetColor(leftoverPosition, color);
         }
+        else
+        {
+            current.InvalidBlocksPlaced += 1;
+        }
 
         return current;
     }

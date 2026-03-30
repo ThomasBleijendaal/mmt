@@ -34,6 +34,7 @@
 
         this.blockedSound = await this.preloadFile("/audio/blocked.mp3");
         this.downSound = await this.preloadFile("/audio/down.mp3");
+        this.lineRemovedSound = await this.preloadFile("/audio/line-removed.mp3");
         this.loseSound = await this.preloadFile("/audio/lose.mp3");
         this.moveSound = await this.preloadFile("/audio/move.mp3");
         this.placeSound = await this.preloadFile("/audio/place.mp3");
@@ -80,6 +81,10 @@
 
     static playDownSound = function () {
         this.playSound(this.downSound);
+    }
+
+    static playLineRemovedSound = function () {
+        this.playSound(this.lineRemovedSound);
     }
 
     static playLoseSound = function () {

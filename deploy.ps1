@@ -4,7 +4,7 @@ $containerVersion = $now.ToString("yyyyMMdd-HHmmss")
 $localContainerName = "games/mtt:$containerVersion"
 $remoteContainerName = "gamecontainerscr.azurecr.io/mtt:$containerVersion"
 
-docker build -f ./Mmt/Mmt.Host/Dockerfile ./Mmt/Mmt.Host/ -t $localContainerName
+docker build -f ./Dockerfile ./ -t $localContainerName
 
 az acr login --name gamecontainerscr
 

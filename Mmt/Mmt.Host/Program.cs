@@ -3,8 +3,10 @@ using System.Threading.Channels;
 using EventCore;
 using Microsoft.AspNetCore.Mvc;
 using Mmt.Host.Game;
+using Mmt.Host.Game.AudioEvents;
 using Mmt.Host.Game.EventHandlers;
 using Mmt.Host.Game.Events;
+using Mmt.Host.Game.VisualEvents;
 using Mmt.Host.Models;
 using Mmt.Host.Services;
 using Mmt.Host.WebSockets;
@@ -16,7 +18,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://*:8080");
 builder.WebHost.UseStaticWebAssets();
 
-var channel = Channel.CreateUnbounded<PlayerUpdate>();
+var playerUpdateChannel = Channel.CreateUnbounded<PlayerUpdate>();
+var audioChannel = Channel.CreateUnbounded<AudioEvent>();
+var visualChannel = Channel.CreateUnbounded<VisualEvent>();
 
 var jsonSerializerOptions = new JsonSerializerOptions
 {
@@ -28,14 +32,20 @@ builder.Services.AddEventCore();
 builder.Services.AddInMemoryStorage();
 builder.Services.AddEntity<GameEntity>();
 builder.Services.AddEventListener<BoardSizeHandler>();
-builder.Services.AddEventListener<ClearedRowsHandler>();
 builder.Services.AddEventListener<ClearRowsHandler>();
+builder.Services.AddEventListener<CompressFieldHandler>();
 builder.Services.AddEventListener<GameFinishedHandler>();
 builder.Services.AddEventListener<PlaceBlockDamageHandler>();
 builder.Services.AddEventListener<PlayerReadyHandler>();
+builder.Services.AddEventListener<RemoveBlocksHandler>();
+builder.Services.AddEventListener<UpdatePlayerHealthHandler>();
 
 builder.Services.AddSingleton(jsonSerializerOptions);
-builder.Services.AddSingleton(channel);
+builder.Services.AddSingleton(playerUpdateChannel);
+builder.Services.AddSingleton(audioChannel.Reader);
+builder.Services.AddSingleton(audioChannel.Writer);
+builder.Services.AddSingleton(visualChannel.Reader);
+builder.Services.AddSingleton(visualChannel.Writer);
 builder.Services.AddHostedService<GameService>();
 builder.Services.AddHostedService<WebSocketReadingService>();
 builder.Services.AddHostedService<WebSocketSendingService>();

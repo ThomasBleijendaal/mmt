@@ -1,6 +1,5 @@
 ﻿namespace EventCore;
 
-// TODO: how do entities exit this?
 internal class EntityCache : IEntityCache
 {
     private readonly Dictionary<Guid, IEntity> _entities = new();

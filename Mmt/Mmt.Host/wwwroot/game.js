@@ -31,6 +31,7 @@ let blockedSince = 0;
 let maxBlock = 2000.0;
 
 let blockState = null;
+let animationState = [];
 let players = null;
 let cleared = 0;
 
@@ -89,11 +90,34 @@ async function initGame() {
         blockState = data.blockState;
 
         cleared = data.rowsCleared;
+
         currentTileSize = data.tileSize;
         gameStarted = !gameFinished && (data.status == "Running" || data.status == "Finished");
 
         playerIndex = players?.filter(x => !x.isDead).findIndex(x => x.id == playerId);
         isNr1 = false;
+
+        let audioToPlay = data.audioToPlay;
+        if (audioToPlay && audioToPlay.length > 0) {
+            for (let type of audioToPlay) {
+                if (type == "BlockPlaced") {
+                    AudioManager.playPlaceSound();
+                }
+                else if (type == "BlockPlacedFailed") {
+                    AudioManager.playPlaceSound();
+                }
+                else if (type == "LineRemoved") {
+                    AudioManager.playLineRemovedSound();
+                }
+            }
+        }
+        let animationsToStart = data.animationsToStart;
+        if (animationsToStart && animationsToStart.length > 0) {
+            for (let animation of animationsToStart) {
+                animationState.push(animation);
+                console.log(animation);
+            }
+        }
 
         let player = players?.find(x => x.id == playerId);
 
@@ -178,11 +202,11 @@ let blockTypes = [
 
     // xX
     //  xx
-    [[-1, 0], [0, 0], [1, 0], [1, 1]],
+    [[-1, 0], [0, 0], [0, 1], [1, 1]],
 
     //  xx
     // xX
-    [[-1, 0], [0, 0], [0, 1], [-1, 1]],
+    [[-1, 0], [0, 0], [0, -1], [1, -1]],
 
     // xXxx
     //
@@ -230,7 +254,7 @@ function getNewShape() {
     let type = 0;
     if (isNr1) {
         type = Math.floor(Math.random() * insaneBlocks);
-        if (type >= saneBlocks) {
+        if (type > saneBlocks) {
             AudioManager.playWeirdBlockSound();
         }
     }

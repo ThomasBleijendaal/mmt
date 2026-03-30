@@ -30,10 +30,18 @@ internal static class ServiceProviderExtensions
 
         public IEntity Handle(IEvent @event, IEntity entity)
         {
-            var key = (@event.GetType(), entity.GetType());
-            var handlesProxy = serviceProvider.GetRequiredKeyedService<IHandlesProxy>(key);
+            try
+            {
+                var key = (@event.GetType(), entity.GetType());
+                var handlesProxy = serviceProvider.GetRequiredKeyedService<IHandlesProxy>(key);
 
-            return handlesProxy.Handle(@event, entity);
+                return handlesProxy.Handle(@event, entity);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Missing handler for {@event.GetType().Name}, {entity.GetType().Name}");
+                throw;
+            }
         }
 
         public async Task BroadcastEventAsync(IEvent @event, IEntity entity)
