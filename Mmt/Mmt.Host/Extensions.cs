@@ -27,6 +27,17 @@ public static class Extensions
 
     extension(List<List<Block>> list)
     {
+        public string? GetColor(Position pos)
+        {
+            if (pos.X < 0 || pos.X >= list[0].Count ||
+                pos.Y < 0 || pos.Y >= list.Count)
+            {
+                return null;
+            }
+
+            return list[pos.Y][pos.X].Color;
+        }
+
         public void SetColor(Position pos, string? color)
         {
             if (pos.X < 0 || pos.X >= list[0].Count ||

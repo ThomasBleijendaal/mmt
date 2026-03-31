@@ -33,18 +33,14 @@ public class CompressFieldHandler : IEventListener<CompressField, GameEntity>
         var size = entity.Size / entity.TileSize;
         for (var y = 0; y < size; y++)
         {
-            var percentage = (y / size);
+            var percentage = (y / (double)size) - 0.3;
 
             blocksToRemove.AddRange(Enumerable.Range(0, size)
                 .Where(_ => Random.Shared.NextDouble() > percentage)
-                .Select(x => new Position(x, y)));
+                .Select(x => new Position(x, y))
+                .Where(p => entity.Field.GetColor(p) != null));
         }
 
         await _session.Events.AppendAsync(new RemoveBlocks(entity.Id, blocksToRemove.ToArray()));
-
-        foreach (var player in entity.Players)
-        {
-            await _session.Events.AppendAsync(new UpdatePlayerHealth(entity.Id, player.Id, -10));
-        }
     }
 }

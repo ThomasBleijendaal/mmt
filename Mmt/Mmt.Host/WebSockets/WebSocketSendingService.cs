@@ -39,17 +39,25 @@ internal class WebSocketSendingService : BackgroundService
 
             foreach (var entity in _session.EntityCache.GetActiveEntities<GameEntity>())
             {
-                await Task.WhenAll(_handler.GetAllWebSockets(entity.Id).Select(x => SendWebSocketAsync(entity, x.playerId, x.ws, stoppingToken)));
+                var audioEvents = GetUniqueAudioEvents();
+                var visualEvents = _visualChannel.ReadAvailable();
+
+                await Task.WhenAll(
+                    _handler.GetAllWebSockets(entity.Id).Select(x =>
+                        SendWebSocketAsync(entity, x.playerId, audioEvents, visualEvents, x.ws, stoppingToken)));
             }
         }
         while (!stoppingToken.IsCancellationRequested);
     }
 
-    private async Task SendWebSocketAsync(GameEntity gameEntity, Guid playerId, WebSocket ws, CancellationToken stoppingToken)
+    private async Task SendWebSocketAsync(
+        GameEntity gameEntity,
+        Guid playerId,
+        AudioEvent[] audioEvents,
+        VisualEvent[] visualEvents,
+        WebSocket ws,
+        CancellationToken stoppingToken)
     {
-        var audioEvents = GetUniqueAudioEvents();
-        var visualEvents = _visualChannel.ReadAvailable();
-
         var state = NetworkGameState.Map(gameEntity, playerId, audioEvents, visualEvents);
 
         var array = ArrayPool<byte>.Shared.Rent(256 * 1024);
