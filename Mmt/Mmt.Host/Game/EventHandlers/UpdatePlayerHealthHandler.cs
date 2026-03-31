@@ -15,9 +15,9 @@ public class UpdatePlayerHealthHandler : IEventListener<UpdatePlayerHealth, Game
         _visualChannel = visualChannel;
     }
 
-    public async Task HandleAsync(UpdatePlayerHealth @event, GameEntity entity)
+    public Task HandleAsync(UpdatePlayerHealth @event, GameEntity entity)
     {
-        VisualEvent ve = @event.Delta >= 0
+        _visualChannel.TryWrite(@event.Delta >= 0
             ? new HealEvent
             {
                 PlayerIds = [@event.PlayerId]
@@ -25,8 +25,8 @@ public class UpdatePlayerHealthHandler : IEventListener<UpdatePlayerHealth, Game
             : new DamageEvent
             {
                 PlayerIds = [@event.PlayerId]
-            };
+            });
 
-        await _visualChannel.WriteAsync(ve);
+        return Task.CompletedTask;
     }
 }

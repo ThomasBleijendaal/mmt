@@ -1,9 +1,23 @@
-function drawBackground() {
+function drawBackground(state) {
     let squareSize = size();
 
     ctx.fillStyle = "#000000";
     ctx.beginPath();
     ctx.clearRect(0, 0, width, height);
+
+    if (state != null) {
+
+        let impact = state / 100.0;
+
+        ctx.globalAlpha = 0.3 * (impact * impact);
+
+        ctx.beginPath();
+        ctx.fillStyle = state < 0 ? "#f00" : "#0f0";
+        ctx.rect(0, 0, width, height);
+        ctx.fill();
+
+        ctx.globalAlpha = 1;
+    }
 
     for (let r = 0; r < rows() + 1; r++) {
         ctx.beginPath();
@@ -46,10 +60,32 @@ function drawState() {
         for (let c = 0; c < columns(); c++) {
             let block = blockState[r][c];
             if (block.color != null) {
-                drawBlock(r, c, block, null, null);
+                drawBlock(r, c, block, null);
             }
         }
     }
+
+    animationState.forEach(animation => {
+        if (!animation.state) {
+            animation.state = 100;
+        }
+        else {
+            animation.state -= 10;
+        }
+
+        if (animation.state == 0) {
+            animationState.delete(animation);
+        }
+        else {
+            let color = `rgba(${animation.state * 2.55}, ${animation.state * 2.55}, ${animation.state * 2.55})`;
+            for (var p of animation.positions) {
+                drawBlock(
+                    p.y,
+                    p.x,
+                    { color: color }, null);
+            }
+        }
+    });
 }
 
 function drawBlock(r, c, block, blockPercentage) {

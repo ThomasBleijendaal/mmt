@@ -38,6 +38,7 @@
         this.loseSound = await this.preloadFile("/audio/lose.mp3");
         this.moveSound = await this.preloadFile("/audio/move.mp3");
         this.placeSound = await this.preloadFile("/audio/place.mp3");
+        this.placeFailedSound = await this.preloadFile("/audio/place-failed.mp3");
         this.rotateSound = await this.preloadFile("/audio/rotate.mp3");
         this.weirdBlockSound = await this.preloadFile("/audio/weird-block.mp3");
         this.winSound = await this.preloadFile("/audio/win.mp3");
@@ -97,6 +98,10 @@
 
     static playPlaceSound = function () {
         this.playSound(this.placeSound, false, 0.04);
+    }
+
+    static playPlaceFailedSound = function () {
+        this.playSound(this.placeFailedSound, true, 0.15);
     }
 
     static playRotateSound = function () {

@@ -75,11 +75,6 @@ public record NetworkGameState
             }
         }
 
-        if (audioEvents.Length > 0)
-        {
-            Console.WriteLine(string.Join(",", audioEvents.Select(x => $"{x.Type} - {string.Join(",", x.PlayerIds ?? [])}")));
-        }
-
         return new NetworkGameState
         {
             BlockState = [.. result.Select(r => r.Select(MapBlock).ToArray())],

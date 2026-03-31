@@ -8,8 +8,6 @@ public partial class GameEntity : IHandles<RemoveBlocks, GameEntity>
 {
     public static GameEntity Handle(RemoveBlocks command, GameEntity current)
     {
-        current.InvalidBlocksPlaced = 0;
-
         var size = current.Size / current.TileSize;
 
         var completeRows = command.Blocks.GroupBy(x => x.Y).Where(r => r.Count() == size).ToArray();

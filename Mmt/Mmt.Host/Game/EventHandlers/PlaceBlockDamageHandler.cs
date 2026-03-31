@@ -27,7 +27,7 @@ public class PlaceBlockDamageHandler : IEventListener<PlaceBlock, GameEntity>
 
             _audioChannel.TryWrite(new AudioEvent
             {
-                PlayerIds = entity.PlayerIdsExcept(@event.PlayerId),
+                PlayerIds = [@event.PlayerId],
                 Type = AudioType.BlockPlacedFailed
             });
 

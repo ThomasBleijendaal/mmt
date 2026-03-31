@@ -31,7 +31,8 @@ let blockedSince = 0;
 let maxBlock = 2000.0;
 
 let blockState = null;
-let animationState = [];
+let animationState = new Set();
+let healState = 0;
 let players = null;
 let cleared = 0;
 
@@ -104,7 +105,7 @@ async function initGame() {
                     AudioManager.playPlaceSound();
                 }
                 else if (type == "BlockPlacedFailed") {
-                    AudioManager.playPlaceSound();
+                    AudioManager.playPlaceFailedSound();
                 }
                 else if (type == "LineRemoved") {
                     AudioManager.playLineRemovedSound();
@@ -114,8 +115,16 @@ async function initGame() {
         let animationsToStart = data.animationsToStart;
         if (animationsToStart && animationsToStart.length > 0) {
             for (let animation of animationsToStart) {
-                animationState.push(animation);
                 console.log(animation);
+                if (animation.type == "DamageEvent") {
+                    healState = -100;
+                }
+                else if (animation.type == "HealEvent") {
+                    healState = 100;
+                }
+                else {
+                    animationState.add(animation);
+                }
             }
         }
 
@@ -469,7 +478,11 @@ function moveBlock() {
 
 function drawFrame() {
     if (blockState && players) {
-        drawBackground();
+        drawBackground(healState);
+
+        if (healState != 0) {
+            healState += healState < 0 ? 1 : -1;
+        }
 
         let currentBlock = currentBlockCenter ? getBlockPositions(currentBlockCenter, currentRotation) : null;
 
