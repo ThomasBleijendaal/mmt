@@ -2,11 +2,11 @@ $now = Get-Date
 $containerVersion = $now.ToString("yyyyMMdd-HHmmss")
 
 $localContainerName = "games/mtt:$containerVersion"
-$remoteContainerName = "gamecontainerscr.azurecr.io/mtt:$containerVersion"
+$remoteContainerName = "mpgcontainerscr.azurecr.io/mtt:$containerVersion"
 
 docker build -f ./Dockerfile ./ -t $localContainerName
 
-az acr login --name gamecontainerscr
+az acr login --name mpgcontainerscr
 
 docker tag $localContainerName $remoteContainerName
 

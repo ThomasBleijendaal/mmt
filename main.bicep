@@ -1,6 +1,6 @@
 param location string = resourceGroup().location
 
-param namePrefix string = 'gamecontainers'
+param namePrefix string = 'mpgcontainers'
 
 param containerRegistryName string = '${namePrefix}cr'
 param containerEnvironmentName string = '${namePrefix}-ace'
@@ -20,7 +20,7 @@ resource ContainerEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' exi
    name: containerEnvironmentName
   
   resource Certificate 'managedCertificates' existing = {
-    name: 'mtt.games.bleij.pro-container'
+    name: 'mmt.games.bleij.pro-mpgconta-260717083440'
   }
 }
 
@@ -48,7 +48,7 @@ resource MttContainerApp 'Microsoft.App/containerApps@2025-10-02-preview' = {
           {
             certificateId: ContainerEnvironment::Certificate.id
             bindingType: 'SniEnabled'
-            name: 'mtt.games.bleij.pro'
+            name: 'mmt.games.bleij.pro'
           }
         ]
       }
